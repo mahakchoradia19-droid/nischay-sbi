@@ -16,6 +16,19 @@ The two systems together make a single argument: **SBI already owns the raw mate
 
 ---
 
+## Judge Submission Pack (for competitive rounds)
+
+If you need a fast, judge-friendly package (quick-start + 3-minute demo + screenshot plan + copy-ready form answers), use:
+
+- `submission_pack/README.md`
+- `submission_pack/01_judge_quickstart.md`
+- `submission_pack/02_submission_one_pager.md`
+- `submission_pack/03_demo_script_3min.md`
+- `submission_pack/04_screenshot_shotlist.md`
+- `submission_pack/05_submission_form_answers.md`
+
+---
+
 ## The Problem We're Solving
 
 SBI is the largest bank in India by almost every measure — branches, customers, balance sheet. Yet private banks consistently outrank it on digital experience. The gap is not product quality or pricing. SBI's FD rates are competitive. Its loan products are often cheaper. The gap is **interaction design**.
