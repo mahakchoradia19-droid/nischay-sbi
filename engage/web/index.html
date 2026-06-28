@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SAARTHI — SBI Proactive Engagement Agent</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ── Header ─────────────────────────────────────────────────── -->
+<header>
+  <div class="header-left">
+    <div class="sbi-logo">🪔</div>
+    <div>
+      <div class="header-title">SAARTHI <span class="beta">सारथी</span></div>
+      <div class="header-sub">SBI Proactive Engagement Agent — helps you before you ask</div>
+    </div>
+  </div>
+  <div class="ai-pill" id="aiPill">
+    <span class="ai-dot"></span>
+    <span id="aiPillText">Connecting…</span>
+  </div>
+</header>
+
+<!-- ── KPI Bar ────────────────────────────────────────────────── -->
+<div class="kpi-bar">
+  <div class="kpi"><div class="kpi-val" id="kpiMonitored">—</div><div class="kpi-label">Customers monitored</div></div>
+  <div class="kpi"><div class="kpi-val kpi-blue" id="kpiNudges">—</div><div class="kpi-label">Proactive nudges (7d)</div></div>
+  <div class="kpi"><div class="kpi-val kpi-green" id="kpiActRate">—</div><div class="kpi-label">Acted-on rate</div></div>
+  <div class="kpi"><div class="kpi-val kpi-gold" id="kpiBounces">—</div><div class="kpi-label">EMI bounces prevented</div></div>
+  <div class="kpi"><div class="kpi-val kpi-green" id="kpiIdle">—</div><div class="kpi-label">Idle balance activated</div></div>
+</div>
+
+<!-- ── Main Layout ────────────────────────────────────────────── -->
+<div class="main">
+
+  <!-- Customer list (left) -->
+  <div class="customers">
+    <div class="customers-header">
+      <span class="customers-title">Customers</span>
+      <span class="customers-hint">Pick one — SAARTHI finds the moment to help</span>
+    </div>
+    <div id="customerList"></div>
+  </div>
+
+  <!-- Phone + reasoning (right) -->
+  <div class="stage">
+
+    <!-- Empty state -->
+    <div class="empty-state" id="emptyState">
+      <div class="empty-icon">🪔</div>
+      <div class="empty-title">Select a customer</div>
+      <div class="empty-sub">SAARTHI watches their financial rhythms and surfaces a single, timely nudge — the right help, in their language, before they ask.</div>
+    </div>
+
+    <!-- Active content -->
+    <div class="stage-content" id="stageContent" style="display:none">
+
+      <!-- Phone mockup -->
+      <div class="phone-col">
+        <div class="phone">
+          <div class="phone-notch"></div>
+          <div class="phone-screen">
+            <div class="phone-statusbar">
+              <span id="phoneTime">9:41</span>
+              <span>YONO</span>
+              <span>📶 🔋</span>
+            </div>
+
+            <!-- Thinking shimmer -->
+            <div class="phone-thinking" id="phoneThinking">
+              <div class="shimmer"></div>
+              <div class="thinking-text">SAARTHI is reading the pattern…</div>
+            </div>
+
+            <!-- The proactive notification card -->
+            <div class="notif-card" id="notifCard" style="display:none">
+              <div class="notif-head">
+                <div class="notif-icon">🪔</div>
+                <div>
+                  <div class="notif-app">YONO · SBI</div>
+                  <div class="notif-now" id="notifMode">now</div>
+                </div>
+                <div class="notif-urg" id="notifUrg">—</div>
+              </div>
+              <div class="notif-title" id="notifTitle">—</div>
+              <div class="notif-body" id="notifBody">—</div>
+              <button class="notif-cta" id="notifCta" onclick="actOnNudge()">—</button>
+              <div class="notif-dismiss">Not now</div>
+            </div>
+
+            <!-- Acted state -->
+            <div class="acted-card" id="actedCard" style="display:none">
+              <div class="acted-check">✓</div>
+              <div class="acted-title" id="actedTitle">Done in one tap.</div>
+              <div class="acted-sub" id="actedSub">No bounce. No penalty. No branch visit.</div>
+            </div>
+          </div>
+        </div>
+        <div class="phone-caption" id="phoneCaption">A real YONO push — in the customer's language.</div>
+      </div>
+
+      <!-- Reasoning trace -->
+      <div class="trace-col">
+        <div class="customer-banner" id="customerBanner">
+          <div class="cb-avatar" id="cbAvatar">R</div>
+          <div>
+            <div class="cb-name" id="cbName">—</div>
+            <div class="cb-meta" id="cbMeta">—</div>
+          </div>
+          <div class="cb-mode" id="cbMode">—</div>
+        </div>
+
+        <div class="trace-panel">
+          <div class="trace-header">
+            <span>Agent Reasoning Trace</span>
+            <span class="trace-path" id="tracePath">—</span>
+          </div>
+          <div class="trace-body" id="traceBody"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script src="engage.js"></script>
+</body>
+</html>
