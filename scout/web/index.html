@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SCOUT — SBI Acquisition Agent</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ── Header ─────────────────────────────────────────────────── -->
+<header>
+  <div class="header-left">
+    <div class="sbi-logo">🏦</div>
+    <div>
+      <div class="header-title">SCOUT <span class="beta">BETA</span></div>
+      <div class="header-sub">SBI Intelligent Acquisition Agent</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="ai-pill" id="aiPill">
+      <span class="ai-dot"></span>
+      <span id="aiPillText">Connecting…</span>
+    </div>
+  </div>
+</header>
+
+<!-- ── KPI Bar ────────────────────────────────────────────────── -->
+<div class="kpi-bar" id="kpiBar">
+  <div class="kpi">
+    <div class="kpi-val" id="kpiProspects">—</div>
+    <div class="kpi-label">Prospects identified (7d)</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-val kpi-blue" id="kpiHighIntent">—</div>
+    <div class="kpi-label">High-intent leads</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-val kpi-green" id="kpiConversions">—</div>
+    <div class="kpi-label">Conversions (7d)</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-val kpi-green" id="kpiRate">—</div>
+    <div class="kpi-label">Conversion rate</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-val kpi-gold" id="kpiCAC">—</div>
+    <div class="kpi-label">Cost per acquisition</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-val kpi-gold" id="kpiCACReduction">—</div>
+    <div class="kpi-label">CAC reduction vs. branch</div>
+  </div>
+</div>
+
+<!-- ── Main Layout ────────────────────────────────────────────── -->
+<div class="main">
+
+  <!-- Prospect Pipeline (left) -->
+  <div class="pipeline" id="pipeline">
+
+    <div class="pipeline-header">
+      <span class="pipeline-title">Prospect Pipeline</span>
+      <span class="pipeline-count" id="pipelineCount">Loading…</span>
+    </div>
+
+    <div class="segment-group">
+      <div class="segment-label seg-jd">🏛 Dormant Jan Dhan</div>
+      <div id="listJD" class="prospect-list"></div>
+    </div>
+
+    <div class="segment-group">
+      <div class="segment-label seg-ep">🏢 Employer Partnership</div>
+      <div id="listEP" class="prospect-list"></div>
+    </div>
+
+    <div class="segment-group">
+      <div class="segment-label seg-le">⚡ Life Event Detection</div>
+      <div id="listLE" class="prospect-list"></div>
+    </div>
+
+  </div>
+
+  <!-- Agent Analysis Panel (right) -->
+  <div class="analysis-panel" id="analysisPanel">
+
+    <!-- Empty state -->
+    <div class="empty-state" id="emptyState">
+      <div class="empty-icon">🎯</div>
+      <div class="empty-title">Select a prospect</div>
+      <div class="empty-sub">SCOUT will analyse their signals, score conversion probability, and generate a personalised outreach in seconds.</div>
+    </div>
+
+    <!-- Analysis content (hidden until a prospect is selected) -->
+    <div class="analysis-content" id="analysisContent" style="display:none">
+
+      <div class="prospect-header">
+        <div class="prospect-avatar" id="pAvatar">P</div>
+        <div>
+          <div class="prospect-name" id="pName">—</div>
+          <div class="prospect-meta" id="pMeta">—</div>
+        </div>
+        <div class="urgency-badge" id="pUrgency">—</div>
+      </div>
+
+      <!-- Conversion metrics -->
+      <div class="metrics-row">
+        <div class="metric-card">
+          <div class="metric-val" id="mConvProb">—</div>
+          <div class="metric-label">Conversion probability</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-val" id="mCLV">—</div>
+          <div class="metric-label">Expected CLV</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-val" id="mCampaign">—</div>
+          <div class="metric-label">Campaign ID</div>
+        </div>
+      </div>
+
+      <!-- Outreach message -->
+      <div class="outreach-block" id="outreachBlock" style="display:none">
+        <div class="outreach-label">
+          <span id="outreachChannel">📱 Channel</span>
+          <span class="outreach-lang" id="outreachLang"></span>
+        </div>
+        <div class="outreach-message" id="outreachMessage"></div>
+        <button class="approve-btn" id="approveBtn" onclick="approveOutreach()">
+          ✅ Approve &amp; Queue Outreach
+        </button>
+        <div class="approved-msg" id="approvedMsg" style="display:none">
+          🎉 Queued to CRM · Compliance: PASSED · DND registry checked
+        </div>
+      </div>
+
+      <!-- Reasoning trace -->
+      <div class="trace-panel">
+        <div class="trace-header">
+          <span>Agent Reasoning Trace</span>
+          <span class="trace-path" id="tracePath">—</span>
+        </div>
+        <div class="trace-body" id="traceBody">
+          <div class="trace-loading" id="traceLoading" style="display:none">
+            <div class="spinner"></div> Analysing prospect…
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script src="scout.js"></script>
+</body>
+</html>
