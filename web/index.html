@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>YONO Nexus — Onboarding Agent</title>
+  <link rel="stylesheet" href="/web/style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo">SBI</span>
+      <div>
+        <div class="brand-title">YONO <b>Nexus</b></div>
+        <div class="brand-sub">Agentic Onboarding · live demo</div>
+      </div>
+    </div>
+    <div class="path" id="path">OFFLINE · deterministic</div>
+  </header>
+
+  <main class="grid">
+    <!-- Chat -->
+    <section class="panel chat">
+      <div class="panel-head">
+        <span>Conversation</span>
+        <button id="restart" class="ghost">↺ Restart</button>
+      </div>
+      <div class="messages" id="messages"></div>
+      <div class="quick" id="quick"></div>
+      <form class="composer" id="composer">
+        <input id="input" autocomplete="off"
+               placeholder="Type a reply… (try Hindi / Hinglish)" />
+        <button type="submit">Send</button>
+      </form>
+    </section>
+
+    <!-- Reasoning trace + metrics -->
+    <aside class="side">
+      <section class="panel trace">
+        <div class="panel-head">
+          <span>Agent Reasoning Trace</span>
+          <span class="hint">why this isn't a chatbot</span>
+        </div>
+        <div class="trace-list" id="trace"></div>
+      </section>
+
+      <section class="panel metrics">
+        <div class="panel-head"><span>Live Metrics</span></div>
+        <div class="metric-grid" id="metrics"></div>
+        <div class="stp" id="stp"></div>
+      </section>
+    </aside>
+  </main>
+
+  <script src="/web/app.js"></script>
+</body>
+</html>
