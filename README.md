@@ -26,6 +26,7 @@ If you need a fast, judge-friendly package (quick-start + 3-minute demo + screen
 - `submission_pack/03_demo_script_3min.md`
 - `submission_pack/04_screenshot_shotlist.md`
 - `submission_pack/05_submission_form_answers.md`
+- `submission_pack/06_yono_signal_engine_plan.md`
 
 ---
 
@@ -65,18 +66,21 @@ Rather than a product catalogue, a personalised visual timeline: "You're 27. Her
 SBI_hackathon/
 │
 ├── README.md                       ← you are here
+├── .env                            ← your API keys (gitignored, never committed)
+├── .env.example                    ← template with all available config options
+├── security.py                     ← shared security: CORS, rate limiting, PII masking
 │
-├── app.py                          ← Onboarding Agent server (port 8000)
-├── agent.py                        ← Agentic orchestrator (offline + live Claude)
-├── tools.py                        ← Simulated SBI tool layer
+├── onboarding_server.py            ← Onboarding Agent server (port 8000)
+├── onboarding_agent.py             ← Agentic orchestrator (offline + live Claude)
+├── onboarding_tools.py             ← Simulated SBI tool layer (with failure modes)
 ├── web/                            ← Onboarding Agent frontend
 │   ├── index.html
 │   ├── style.css
 │   └── app.js
 │
 └── finlearn/                       ← FinSmart Arena (port 8001)
-    ├── app.py                      ← Game server
-    ├── agents.py                   ← 4 Gemini-powered AI agents
+    ├── game_server.py              ← Game server
+    ├── ai_agents.py                ← 4 Gemini-powered AI agents
     ├── game_data.py                ← 32 questions, 8 badges, investment profiles
     └── web/
         ├── index.html
@@ -94,12 +98,16 @@ SBI_hackathon/
 # Clone or unzip the submission
 cd SBI_hackathon
 
+# (Optional) Add your API keys
+cp .env.example .env
+# Edit .env with your Anthropic / Gemini keys
+
 # Start Pillar 1: Onboarding Agent
-python3 app.py
+python3 onboarding_server.py
 # → http://localhost:8000
 
 # In a separate terminal: Start Pillar 2: FinSmart Arena
-cd finlearn && python3 app.py
+cd finlearn && python3 game_server.py
 # → http://localhost:8001
 ```
 
@@ -167,7 +175,7 @@ Every tool is a stub today. In production, each function becomes a gRPC or REST 
 ### Live Claude (optional)
 
 ```bash
-ANTHROPIC_API_KEY=sk-ant-... python3 app.py
+ANTHROPIC_API_KEY=sk-ant-... python3 onboarding_server.py
 ```
 
 With a key, the same tool schemas are handed to Claude Opus 4.8, which plans and executes the onboarding autonomously. The Agent Reasoning Trace panel updates in real time. Without a key, the deterministic path runs identically — the demo is indistinguishable to the user.
@@ -245,7 +253,7 @@ Generates novel cyber-fraud scenarios based on current India-specific threat tre
 
 ```bash
 cd finlearn
-GEMINI_API_KEY=your_key_here python3 app.py
+GEMINI_API_KEY=your_key_here python3 game_server.py
 ```
 
 The AI pill on the hub screen switches from grey ("Offline Mode") to purple ("AI Active · Gemini 2.0 Flash"). All four agents activate. The game is fully playable and rich without the key — the key adds personalisation and novel content generation.
@@ -334,8 +342,8 @@ Private banks can copy the technology. They cannot copy the data. SBI's 500M+ cu
 
 ```bash
 # 1. Start both systems (two terminals)
-python3 app.py                          # port 8000 — onboarding agent
-cd finlearn && python3 app.py           # port 8001 — game
+python3 onboarding_server.py                    # port 8000 — onboarding agent
+cd finlearn && python3 game_server.py           # port 8001 — game
 
 # 2. Onboarding: http://localhost:8000
 #    Click "Upload Aadhaar + PAN"
@@ -351,8 +359,13 @@ cd finlearn && python3 app.py           # port 8001 — game
 
 # 4. (Optional) Enable AI — free, takes 60 seconds to set up
 #    Get key: https://aistudio.google.com/apikey
-#    GEMINI_API_KEY=your_key cd finlearn && python3 app.py
+#    Add it to your .env file: GEMINI_API_KEY=your_key
+#    cd finlearn && python3 game_server.py
 #    The AI pill on the hub turns purple — Wealth Wizard advice becomes personalised
+
+# 5. (Optional) Demo AML escalation path
+#    DEMO_AML_HIT=1 python3 onboarding_server.py
+#    The agent will escalate to compliance instead of opening the account
 ```
 
 ---
@@ -381,20 +394,22 @@ Technical implementation: a lightweight profile agent reads the customer's produ
 
 | File | Purpose |
 |---|---|
-| `app.py` | stdlib HTTP server, serves `web/` and exposes `/api/start`, `/api/message` |
-| `agent.py` | Dual-path orchestrator: offline state machine + live Claude tool-calling loop. Contains bilingual copy (English/Hindi), conversation state, tool dispatch |
-| `tools.py` | 5 simulated SBI tools with production-ready schemas. The mock Aadhaar/PAN data is designed to trigger the self-healing mismatch flow |
+| `onboarding_server.py` | stdlib HTTP server with CORS, rate limiting, and input validation. Serves `web/` and exposes `/api/start`, `/api/message` |
+| `onboarding_agent.py` | Dual-path orchestrator: offline state machine + live Claude tool-calling loop. Handles AML escalation, OCR retry, PAN failure, and session expiry. Bilingual copy (English/Hindi/Tamil/Bengali) |
+| `onboarding_tools.py` | 5 simulated SBI tools with configurable failure modes (AML hit, OCR failure, invalid PAN, CKYC duplicate). PII masking on all outputs |
+| `security.py` | Shared security middleware: CORS, rate limiting, input validation, session TTL cleanup, PII masking |
+| `.env` | Your API keys (gitignored, never committed) |
+| `.env.example` | Template with all available config options (Anthropic, Gemini, ports, security settings) |
 | `web/index.html` | Single-page chat interface with Agent Reasoning Trace panel and Live Metrics dashboard |
 | `web/style.css` | SBI blue theme, responsive |
 | `web/app.js` | Thin client: renders messages, trace events, metrics; calls the API |
-| `.env.example` | Instructions for optional Anthropic key |
 
 ### finlearn/ (FinSmart Arena — port 8001)
 
 | File | Purpose |
 |---|---|
-| `app.py` | Game server, all API endpoints, imports agents and game_data |
-| `agents.py` | QuizAgent, AdvisorAgent, ExplainerAgent, ScenarioAgent — all call Gemini 2.0 Flash if key is set, fall back to static content if not |
+| `game_server.py` | Game server with CORS, rate limiting, and input validation. All API endpoints |
+| `ai_agents.py` | QuizAgent, AdvisorAgent, ExplainerAgent, ScenarioAgent — all call Gemini 2.0 Flash via secure header auth (not URL param). Fall back to static content if no key |
 | `game_data.py` | 12 interest questions, 12 cyber scenarios, 8 card scenarios, 2 investment profiles, 8 badge definitions, 11 level thresholds |
 | `web/index.html` | Full game UI: hub, 4 game screens, results screen, toast/badge/level-up overlays |
 | `web/style.css` | Dark game aesthetic, SBI-branded, responsive |

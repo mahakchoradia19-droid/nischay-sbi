@@ -1,11 +1,12 @@
 """
 YONO Nexus — Onboarding Agent orchestrator.
 
-Two execution paths, ONE set of tools (tools.py):
+Two execution paths, ONE set of tools (onboarding_tools.py):
 
   * OFFLINE (default, zero setup): a deterministic goal-state machine that
     reproduces genuine agentic behaviour — autonomous multi-tool sequencing,
-    self-healing on a KYC name-mismatch, infer-don't-ask, and vernacular memory.
+    self-healing on a KYC name-mismatch, AML escalation, OCR retry, and
+    vernacular memory across language switches.
 
   * LIVE (auto-enabled when ANTHROPIC_API_KEY is set): the same goal + tools are
     handed to Claude (Opus 4.8) which plans and calls the tools itself via the
@@ -14,6 +15,14 @@ Two execution paths, ONE set of tools (tools.py):
 Both paths emit the SAME response contract to the UI:
     {reply, trace, metrics, quick_replies, done, lang}
 so the "Agent Reasoning Trace" panel looks identical regardless of path.
+
+VULNERABILITY FIXES:
+  - AML failure path: agent escalates on HIGH risk (not just name mismatch)
+  - OCR failure path: agent requests re-upload on bad document
+  - Session TTL: sessions expire after 30 minutes
+  - Better error handling: no bare except, specific exception types
+  - More languages: Tamil and Bengali greeting support added
+  - PII masking in trace output
 """
 
 import json
@@ -22,14 +31,19 @@ import time
 import urllib.request
 import urllib.error
 
-import tools
+import onboarding_tools as tools
+from security import session_manager, mask_pii
 
 MODEL = os.environ.get("YONO_MODEL", "claude-opus-4-8")
 
 # ---------------------------------------------------------------------------
 # Session store (in-memory; one onboarding journey per session_id).
+# Sessions are cleaned up by the security module's SessionManager.
 # ---------------------------------------------------------------------------
 SESSIONS = {}
+
+# Start the session cleanup timer
+session_manager.start_cleanup_timer(SESSIONS, interval=300)
 
 
 def new_session(session_id: str) -> dict:
@@ -66,6 +80,16 @@ def greeting(session: dict) -> dict:
 
 def handle(session: dict, text: str = "", action: str = "") -> dict:
     """Single entry point the server calls per user turn."""
+    # Check session validity
+    if not session_manager.is_session_valid(session):
+        return _respond(
+            session,
+            text=_t(session, "session_expired"),
+            trace=[{"label": "Session expired", "detail":
+                    "Session exceeded 30-minute TTL. Please reload to start a new session."}],
+            done=True,
+        )
+
     session["metrics"]["turns"] += 1
 
     # Vernacular switch is honoured at any point and demonstrates cross-turn memory.
@@ -84,9 +108,15 @@ def handle(session: dict, text: str = "", action: str = "") -> dict:
     if _has_key():
         try:
             return _handle_live(session, text or action)
-        except Exception as e:  # never let the live path break the demo
-            session.setdefault("_live_error", str(e))
+        except urllib.error.HTTPError as e:
+            session.setdefault("_live_error", f"API error: {e.code} {e.reason}")
             # fall through to deterministic path
+        except urllib.error.URLError as e:
+            session.setdefault("_live_error", f"Network error: {e.reason}")
+        except json.JSONDecodeError as e:
+            session.setdefault("_live_error", f"Response parse error: {e}")
+        except (KeyError, TypeError, ValueError) as e:
+            session.setdefault("_live_error", f"Unexpected error: {e}")
     return _handle_offline(session, text, action)
 
 
@@ -128,6 +158,14 @@ def _handle_offline(session: dict, text: str, action: str) -> dict:
         session["metrics"]["fields_asked"] += 1
         return _step_open_account(session)
 
+    if state == "aml_hold":
+        # AML escalation state — cannot proceed, must wait for compliance review
+        return _respond(session, text=_t(session, "aml_hold_info"),
+                        trace=[{"label": "AML Hold", "detail":
+                                "Account opening blocked pending AML compliance review. "
+                                "This is a governed escalation — the agent cannot "
+                                "override AML decisions."}])
+
     if state in ("done", "handoff"):
         return _respond(session, text=_t(session, "already_done"),
                         done=(state == "done"))
@@ -137,13 +175,42 @@ def _handle_offline(session: dict, text: str, action: str) -> dict:
 
 def _step_ingest_documents(session: dict) -> dict:
     trace = []
-    aadhaar = tools.ocr_extract("aadhaar"); session["metrics"]["tool_calls"] += 1
+
+    # OCR — Aadhaar
+    aadhaar = tools.ocr_extract("aadhaar")
+    session["metrics"]["tool_calls"] += 1
+    if not aadhaar.get("ok"):
+        # OCR FAILURE PATH — request re-upload
+        trace.append(_tt("ocr_extract", {"document_type": "aadhaar"},
+                         {"error": aadhaar.get("error", "OCR failed")}))
+        trace.append({"label": "Agent reasoning", "detail":
+                      "Aadhaar OCR failed (likely blurry or obscured image). "
+                      "Instead of dead-ending, requesting a re-upload."})
+        return _respond(session, text=_t(session, "ocr_failed"),
+                        trace=trace,
+                        quick_replies=[{"label": "📎 Re-upload Aadhaar + PAN",
+                                        "action": "upload_docs"}])
+
     trace.append(_tt("ocr_extract", {"document_type": "aadhaar"},
                      {"name": aadhaar["fields"]["name"],
                       "liveness": aadhaar["liveness_score"]}))
-    pan = tools.ocr_extract("pan"); session["metrics"]["tool_calls"] += 1
+
+    # OCR — PAN
+    pan = tools.ocr_extract("pan")
+    session["metrics"]["tool_calls"] += 1
+    if not pan.get("ok"):
+        trace.append(_tt("ocr_extract", {"document_type": "pan"},
+                         {"error": pan.get("error", "OCR failed")}))
+        trace.append({"label": "Agent reasoning", "detail":
+                      "PAN OCR failed. Requesting re-upload."})
+        return _respond(session, text=_t(session, "ocr_failed"),
+                        trace=trace,
+                        quick_replies=[{"label": "📎 Re-upload Aadhaar + PAN",
+                                        "action": "upload_docs"}])
+
     trace.append(_tt("ocr_extract", {"document_type": "pan"},
-                     {"name": pan["fields"]["name"], "pan": pan["fields"]["pan"]}))
+                     {"name": pan["fields"]["name"],
+                      "pan": pan["fields"].get("pan_display", "MASKED")}))
 
     p = session["profile"]
     p.update({
@@ -158,9 +225,26 @@ def _step_ingest_documents(session: dict) -> dict:
     # 7 fields lifted from documents with zero typing by the user
     session["metrics"]["fields_extracted"] += 7
 
+    # Validate PAN
     val = tools.validate_pan(p["pan"], p["aadhaar_name"])
     session["metrics"]["tool_calls"] += 1
-    trace.append(_tt("validate_pan", {"pan": p["pan"], "name": p["aadhaar_name"]},
+
+    if not val.get("ok"):
+        # PAN INVALID PATH — cannot proceed
+        trace.append(_tt("validate_pan", {"pan": "MASKED", "name": p["aadhaar_name"]},
+                         {"error": val.get("error", "PAN validation failed"),
+                          "pan_status": val.get("pan_status", "ERROR")}))
+        trace.append({"label": "Agent reasoning", "detail":
+                      f"PAN validation failed: {val.get('error')}. "
+                      "Cannot proceed with account opening. Escalating to "
+                      "relationship officer for manual verification."})
+        session["state"] = "handoff"
+        session["metrics"]["human_handoffs"] = 1
+        return _respond(session, text=_t(session, "pan_invalid"),
+                        trace=trace)
+
+    trace.append(_tt("validate_pan",
+                     {"pan": "MASKED", "name": p["aadhaar_name"]},
                      {"pan_status": val["pan_status"], "name_match": val["name_match"],
                       "score": val["name_match_score"]}))
 
@@ -187,13 +271,43 @@ def _step_resolve_identity(session: dict, confirmed: bool, trace=None) -> dict:
                   f"Reconciled identity → legal name '{p['full_name']}'. "
                   "Resumed straight-through flow (no handoff)."})
 
+    # CKYC lookup
     ck = tools.ckyc_lookup(p["aadhaar_last4"], p["full_name"])
     session["metrics"]["tool_calls"] += 1
-    trace.append(_tt("ckyc_lookup", {"aadhaar_last4": p["aadhaar_last4"]},
-                     {"existing_record": ck["existing_record"]}))
 
+    if ck.get("existing_record"):
+        trace.append(_tt("ckyc_lookup", {"aadhaar_last4": "MASKED"},
+                         {"existing_record": True,
+                          "ckyc_id": ck.get("ckyc_id"),
+                          "hint": ck.get("existing_account_hint", "")}))
+        trace.append({"label": "Agent reasoning", "detail":
+                      "CKYC record already exists — pre-filling verified details "
+                      "and skipping redundant verification steps."})
+    else:
+        trace.append(_tt("ckyc_lookup", {"aadhaar_last4": "MASKED"},
+                         {"existing_record": ck["existing_record"]}))
+
+    # AML screening
     aml = tools.aml_screen(p["full_name"], p["dob"])
     session["metrics"]["tool_calls"] += 1
+
+    if aml.get("decision") == "HOLD" or aml.get("risk") == "HIGH":
+        # AML ESCALATION PATH — cannot proceed, must escalate
+        trace.append(_tt("aml_screen", {"name": p["full_name"], "dob": p["dob"]},
+                         {"risk": aml["risk"], "decision": aml["decision"],
+                          "reason": aml.get("reason", "Flagged for review")}))
+        trace.append({"label": "Agent reasoning · AML escalation", "detail":
+                      f"AML screen returned {aml['risk']} risk with decision "
+                      f"'{aml['decision']}'. This is a GOVERNED ESCALATION — "
+                      "the agent is NOT permitted to override AML compliance. "
+                      "Escalating to AML compliance team for Level 2 review. "
+                      "The customer's application is placed on hold, not rejected."})
+        session["state"] = "aml_hold"
+        session["metrics"]["human_handoffs"] = 1
+        return _respond(session, text=_t(session, "aml_escalation",
+                                          name=p["first_name"]),
+                        trace=trace)
+
     trace.append(_tt("aml_screen", {"name": p["full_name"], "dob": p["dob"]},
                      {"risk": aml["risk"], "decision": aml["decision"]}))
 
@@ -211,6 +325,21 @@ def _step_open_account(session: dict) -> dict:
     res = tools.create_account(p["full_name"], p["pan"], p["aadhaar_last4"],
                                p["occupation"])
     session["metrics"]["tool_calls"] += 1
+
+    if not res.get("ok"):
+        # Account creation failure
+        trace = [_tt("create_account",
+                      {"full_name": p["full_name"], "occupation": p["occupation"]},
+                      {"error": res.get("error", "Account creation failed"),
+                       "status": res.get("status", "ERROR")})]
+        trace.append({"label": "Agent reasoning", "detail":
+                      "Account creation failed in core banking. This could be a "
+                      "system issue. Escalating for manual resolution."})
+        session["state"] = "handoff"
+        session["metrics"]["human_handoffs"] = 1
+        return _respond(session, text=_t(session, "account_failed"),
+                        trace=trace)
+
     session["state"] = "done"
     trace = [_tt("create_account",
                  {"full_name": p["full_name"], "occupation": p["occupation"]},
@@ -233,9 +362,11 @@ SYSTEM_PROMPT = (
     "from the documents and ask the customer ONLY for what you genuinely cannot "
     "derive. If the Aadhaar and PAN names disagree, DO NOT dead-end: reason about "
     "the likely cause and ask one targeted reconciliation question, then proceed. "
+    "If AML returns a HOLD decision, you MUST escalate — do NOT proceed with "
+    "account opening. If OCR fails, ask the customer to re-upload a clearer photo. "
     "If the user writes in Hindi/Hinglish, reply in kind and keep prior context. "
-    "Keep replies short and warm. Only escalate to a human on a real AML hit or "
-    "tamper flag."
+    "Keep replies short and warm. Only escalate to a human on a real AML hit, "
+    "tamper flag, or unresolvable identity conflict."
 )
 
 
@@ -247,9 +378,8 @@ def _handle_live(session: dict, user_text: str) -> dict:
     for _ in range(8):  # bounded tool loop
         data = _anthropic_call(msgs)
         content = data.get("content", [])
-        assistant_blocks, tool_uses = [], []
+        tool_uses = []
         for block in content:
-            assistant_blocks.append(block)
             if block.get("type") == "text":
                 final_text += block["text"]
             elif block.get("type") == "tool_use":
@@ -262,7 +392,13 @@ def _handle_live(session: dict, user_text: str) -> dict:
         tool_results = []
         for tu in tool_uses:
             fn = tools.TOOL_FUNCS.get(tu["name"])
-            out = fn(**tu["input"]) if fn else {"ok": False, "error": "unknown tool"}
+            if fn is None:
+                out = {"ok": False, "error": f"Unknown tool: {tu['name']}"}
+            else:
+                try:
+                    out = fn(**tu["input"])
+                except (TypeError, ValueError) as e:
+                    out = {"ok": False, "error": f"Tool call error: {e}"}
             session["metrics"]["tool_calls"] += 1
             trace.append(_tt(tu["name"], tu["input"], _summarise(out)))
             tool_results.append({"type": "tool_result", "tool_use_id": tu["id"],
@@ -271,6 +407,10 @@ def _handle_live(session: dict, user_text: str) -> dict:
 
     if "account_number" in final_text.lower() or "ACTIVE" in final_text:
         session["state"] = "done"
+    elif "hold" in final_text.lower() or "escalat" in final_text.lower():
+        session["state"] = "aml_hold"
+        session["metrics"]["human_handoffs"] = 1
+
     return _respond(session, text=final_text.strip() or "…", trace=trace,
                     quick_replies=_current_quick_replies(session),
                     done=(session["state"] == "done"))
@@ -326,7 +466,8 @@ def _tt(name, args, result) -> dict:
 
 def _summarise(out: dict) -> dict:
     keys = ("name", "pan_status", "name_match", "risk", "decision",
-            "existing_record", "account_number", "status")
+            "existing_record", "account_number", "status", "error",
+            "reason", "escalation_required")
     s = {k: out[k] for k in keys if k in out}
     if "fields" in out:
         s["name"] = out["fields"].get("name")
@@ -376,8 +517,9 @@ def _wants_hindi(t):
 
 
 # ---------------------------------------------------------------------------
-# Minimal bilingual copy. The live path generates language itself; this table
-# powers the offline path and proves vernacular *memory* on switch.
+# Bilingual copy table — now supports English, Hindi, Tamil, and Bengali
+# greetings. The live path generates language itself; this table powers the
+# offline path and proves vernacular *memory* on switch.
 # ---------------------------------------------------------------------------
 _COPY = {
     "greet": {
@@ -385,15 +527,19 @@ _COPY = {
               "account in a couple of minutes — no forms. Just share your Aadhaar "
               "and PAN to begin.",
         "hi": "नमस्ते! मैं आपका SBI ऑनबोर्डिंग सहायक हूँ। बिना किसी फॉर्म के दो मिनट में "
-              "आपका बचत खाता खोल दूँगा। शुरू करने के लिए अपना आधार और पैन साझा करें।"},
+              "आपका बचत खाता खोल दूँगा। शुरू करने के लिए अपना आधार और पैन साझा करें।",
+        "ta": "வணக்கம்! நான் உங்கள் SBI கணக்கு தொடக்க உதவியாளர். படிவங்கள் இல்லாமல் "
+              "சில நிமிடங்களில் உங்கள் சேமிப்பு கணக்கைத் தொடங்குவேன்.",
+        "bn": "নমস্কার! আমি আপনার SBI অনবোর্ডিং সহায়ক। কোনো ফর্ম ছাড়াই কয়েক মিনিটে "
+              "আপনার সেভিংস অ্যাকাউন্ট খুলে দেব।"},
     "need_docs": {
         "en": "Let's start by uploading your Aadhaar and PAN.",
         "hi": "कृपया पहले अपना आधार और पैन अपलोड करें।"},
     "mismatch": {
-        "en": "Quick check, {a} — your Aadhaar reads “{a}”, but your PAN says "
-              "“{pn}”. Is “Singh” part of your full legal name (i.e. same person)?",
-        "hi": "एक छोटी पुष्टि, {a} — आपके आधार पर “{a}” है, पर पैन पर “{pn}” है। "
-              "क्या “Singh” आपके पूरे नाम का हिस्सा है (यानी एक ही व्यक्ति)?"},
+        "en": "Quick check, {a} — your Aadhaar reads \"{a}\", but your PAN says "
+              "\"{pn}\". Is \"Singh\" part of your full legal name (i.e. same person)?",
+        "hi": "एक छोटी पुष्टि, {a} — आपके आधार पर \"{a}\" है, पर पैन पर \"{pn}\" है। "
+              "क्या \"Singh\" आपके पूरे नाम का हिस्सा है (यानी एक ही व्यक्ति)?"},
     "confirm_prompt": {
         "en": "Just confirm — is the PAN the same person as the Aadhaar?",
         "hi": "कृपया पुष्टि करें — क्या पैन और आधार एक ही व्यक्ति के हैं?"},
@@ -424,6 +570,41 @@ _COPY = {
     "fallback": {
         "en": "Let's continue your onboarding.",
         "hi": "चलिए आपका ऑनबोर्डिंग जारी रखते हैं।"},
+    # ── NEW: error/escalation paths ──
+    "ocr_failed": {
+        "en": "I couldn't read the document clearly — it may be blurry or partially "
+              "covered. Could you take a fresh photo and re-upload?",
+        "hi": "दस्तावेज़ ठीक से नहीं पढ़ पाया — शायद धुंधला है। कृपया फिर से साफ फोटो "
+              "लेकर अपलोड करें।"},
+    "pan_invalid": {
+        "en": "Your PAN could not be verified with the NSDL registry. This may mean "
+              "it's been deactivated. I'll connect you to a relationship officer "
+              "who can help resolve this.",
+        "hi": "आपका PAN NSDL रजिस्ट्री से सत्यापित नहीं हो सका। मैं आपको एक अधिकारी "
+              "से जोड़ता हूँ जो इसे हल कर सकते हैं।"},
+    "aml_escalation": {
+        "en": "Thank you, {name}. Your verification is complete but requires an "
+              "additional compliance review — this is standard procedure for "
+              "some applications. Our compliance team will reach out within "
+              "24 hours. Your progress is saved and secure.",
+        "hi": "धन्यवाद, {name}। आपका सत्यापन पूरा हो गया है लेकिन एक अतिरिक्त अनुपालन "
+              "समीक्षा की आवश्यकता है — कुछ आवेदनों के लिए यह मानक प्रक्रिया है। हमारी "
+              "अनुपालन टीम 24 घंटे के भीतर संपर्क करेगी।"},
+    "aml_hold_info": {
+        "en": "Your application is currently under compliance review. Our team will "
+              "contact you within 24 hours. No action needed from your side.",
+        "hi": "आपका आवेदन अभी अनुपालन समीक्षा में है। हमारी टीम 24 घंटे में संपर्क करेगी।"},
+    "account_failed": {
+        "en": "There was an issue opening your account. I'll connect you to a "
+              "relationship officer to complete the process. Your verified details "
+              "are saved.",
+        "hi": "खाता खोलने में कोई समस्या आई। मैं आपको एक अधिकारी से जोड़ता हूँ। "
+              "आपके सत्यापित विवरण सुरक्षित हैं।"},
+    "session_expired": {
+        "en": "Your session has expired for security reasons. Please reload to "
+              "start a new onboarding session.",
+        "hi": "सुरक्षा कारणों से आपका सत्र समाप्त हो गया है। कृपया नया सत्र शुरू "
+              "करने के लिए पुनः लोड करें।"},
     # quick-reply labels
     "yes_same": {"en": "Yes, same person", "hi": "हाँ, एक ही व्यक्ति"},
     "no_diff": {"en": "No, different", "hi": "नहीं, अलग"},

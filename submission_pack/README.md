@@ -10,6 +10,7 @@ Use it when you need to communicate quickly, prove that the build is real, and a
 - `03_demo_script_3min.md`: timestamped demo narration.
 - `04_screenshot_shotlist.md`: exact screenshots and captions to submit.
 - `05_submission_form_answers.md`: copy-paste draft answers for typical hackathon forms.
+- `06_yono_signal_engine_plan.md`: stronger product plan inspired by STEP Mirror and Trend Recommendations.
 
 ## Recommended order before submitting
 
@@ -18,6 +19,7 @@ Use it when you need to communicate quickly, prove that the build is real, and a
 3. Use `02_submission_one_pager.md` as your PDF attachment.
 4. Rehearse with `03_demo_script_3min.md` once.
 5. Verify every screenshot in `04_screenshot_shotlist.md` is present.
+6. Use `06_yono_signal_engine_plan.md` if you want to reframe the project around one stronger core idea.
 
 ## Integrity note
 

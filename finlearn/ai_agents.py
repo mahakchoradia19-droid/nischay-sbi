@@ -10,6 +10,9 @@ Agent roster:
   AdvisorAgent — analyses idle money profile, ranks investment options with reasoning
   ExplainerAgent — explains wrong answers in friendly Hindi/English
   ScenarioAgent — generates new cyber-threat scenarios based on current India trends
+
+SECURITY FIX: API key moved from URL query parameter to x-goog-api-key HTTP header.
+This prevents the key from leaking into browser history, proxy logs, and CDN edge logs.
 """
 
 import json
@@ -19,9 +22,12 @@ import urllib.error
 import game_data
 
 GEMINI_KEY = os.environ.get("GEMINI_API_KEY", "")
+
+# SECURITY FIX: Use header-based auth instead of key-in-URL.
+# The key is passed via the x-goog-api-key header, not a query parameter.
 GEMINI_URL = (
     "https://generativelanguage.googleapis.com/v1beta/models/"
-    "gemini-2.0-flash:generateContent?key={key}"
+    "gemini-2.0-flash:generateContent"
 )
 
 
@@ -34,14 +40,24 @@ def _gemini(prompt: str, temperature: float = 0.7, max_tokens: int = 1024):
     }).encode()
     try:
         req = urllib.request.Request(
-            GEMINI_URL.format(key=GEMINI_KEY),
+            GEMINI_URL,
             data=body,
-            headers={"Content-Type": "application/json"},
+            headers={
+                "Content-Type": "application/json",
+                "x-goog-api-key": GEMINI_KEY,  # SECURITY: header, not URL param
+            },
         )
         with urllib.request.urlopen(req, timeout=15) as r:
             data = json.loads(r.read())
         return data["candidates"][0]["content"]["parts"][0]["text"]
-    except Exception:
+    except urllib.error.HTTPError as e:
+        print(f"  [ai_agents] Gemini HTTP error: {e.code} {e.reason}")
+        return None
+    except urllib.error.URLError as e:
+        print(f"  [ai_agents] Gemini network error: {e.reason}")
+        return None
+    except (json.JSONDecodeError, KeyError, IndexError) as e:
+        print(f"  [ai_agents] Gemini response parse error: {e}")
         return None
 
 
@@ -91,7 +107,7 @@ Respond ONLY with valid JSON in this exact format:
                 q["id"] = "ai_gen"
                 q["ai_generated"] = True
                 return q
-        except (json.JSONDecodeError, KeyError):
+        except (json.JSONDecodeError, KeyError, ValueError):
             pass
         return None
 
@@ -256,7 +272,7 @@ Respond ONLY with valid JSON:
             s = json.loads(raw)
             s["ai_generated"] = True
             return s
-        except (json.JSONDecodeError, KeyError):
+        except (json.JSONDecodeError, KeyError, ValueError):
             return None
 
 
