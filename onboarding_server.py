@@ -72,6 +72,7 @@ class Handler(BaseHTTPRequestHandler):
             log_request(self, "/api/start")
             sid = str(uuid.uuid4())
             session = agent.new_session(sid)
+            agent.set_ui_language(session, body.get("lang", "en"))
             out = agent.greeting(session)
             out["session_id"] = sid
             return self._send(200, out)
@@ -84,7 +85,8 @@ class Handler(BaseHTTPRequestHandler):
                                                   "Please reload to start a new session."})
             log_request(self, "/api/message", f"session={sid[:8]}… action={body.get('action', '')}")
             out = agent.handle(session, text=body.get("text", ""),
-                               action=body.get("action", ""))
+                               action=body.get("action", ""),
+                               lang=body.get("lang", ""))
             out["session_id"] = sid
             return self._send(200, out)
 

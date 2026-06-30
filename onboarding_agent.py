@@ -51,6 +51,7 @@ def new_session(session_id: str) -> dict:
         "id": session_id,
         "state": "await_docs",
         "lang": "en",
+        "target_language": None,   # full language name when a live-only language is chosen
         "profile": {},          # accumulated, agent-inferred customer facts
         "metrics": {
             "fields_extracted": 0,
@@ -66,6 +67,37 @@ def new_session(session_id: str) -> dict:
     return s
 
 
+# Languages that have full offline copy; everything else needs the live model.
+_OFFLINE_LANGS = ("en", "hi")
+_LANG_NAMES = {
+    "en": "English", "hi": "Hindi", "ta": "Tamil", "bn": "Bengali",
+    "mr": "Marathi", "te": "Telugu", "gu": "Gujarati", "kn": "Kannada",
+    "pa": "Punjabi",
+}
+
+
+def set_ui_language(session: dict, code: str) -> None:
+    """
+    Apply the user's chosen language.
+      - en/hi  : first-class offline (deterministic copy exists).
+      - others : if a live key is present, Claude generates that language natively
+                 (reply.lang = code → browser speaks it). Otherwise we fall back to
+                 English text honestly, rather than mislabel an untranslated string.
+    """
+    code = (code or "en").split("-")[0].lower()
+    if code not in _LANG_NAMES:
+        code = "en"
+    if code in _OFFLINE_LANGS:
+        session["lang"] = code
+        session["target_language"] = None
+    elif _has_key():
+        session["lang"] = code                      # live model will produce it
+        session["target_language"] = _LANG_NAMES[code]
+    else:
+        session["lang"] = "en"                      # honest fallback (English voice)
+        session["target_language"] = None
+
+
 def greeting(session: dict) -> dict:
     return _respond(
         session,
@@ -78,7 +110,7 @@ def greeting(session: dict) -> dict:
     )
 
 
-def handle(session: dict, text: str = "", action: str = "") -> dict:
+def handle(session: dict, text: str = "", action: str = "", lang: str = "") -> dict:
     """Single entry point the server calls per user turn."""
     # Check session validity
     if not session_manager.is_session_valid(session):
@@ -89,6 +121,26 @@ def handle(session: dict, text: str = "", action: str = "") -> dict:
                     "Session exceeded 30-minute TTL. Please reload to start a new session."}],
             done=True,
         )
+
+    # Explicit language selection from the UI dropdown (no turn consumed).
+    if action == "set_language":
+        prev = session["lang"]
+        set_ui_language(session, lang)
+        name = session["profile"].get("first_name", "")
+        note = (f"Language set to {_LANG_NAMES.get(session['lang'], 'English')}"
+                + (" (Live AI)" if session.get("target_language") else "") + ".")
+        return _respond(
+            session,
+            text=_t(session, "lang_switch", name=name) if session["lang"] in _OFFLINE_LANGS
+                 else f"{note} I'll continue in your language.",
+            trace=[{"label": "Language switch", "detail":
+                    f"{note} Retained name='{name or '—'}' and state='{session['state']}'."}],
+            quick_replies=_current_quick_replies(session),
+        )
+
+    # A per-message language hint keeps offline en/hi in sync with the dropdown.
+    if lang and lang.split("-")[0].lower() in _OFFLINE_LANGS:
+        session["lang"] = lang.split("-")[0].lower()
 
     session["metrics"]["turns"] += 1
 
@@ -267,6 +319,7 @@ def _step_resolve_identity(session: dict, confirmed: bool, trace=None) -> dict:
     p = session["profile"]
     # Reconcile to the fuller legal name (PAN), keep Aadhaar as alias.
     p["full_name"] = p.get("pan_name", p.get("aadhaar_name"))
+    p["identity_reconciled"] = True   # gate flag — set only after reconciliation
     trace.append({"label": "Agent reasoning", "detail":
                   f"Reconciled identity → legal name '{p['full_name']}'. "
                   "Resumed straight-through flow (no handoff)."})
@@ -310,6 +363,7 @@ def _step_resolve_identity(session: dict, confirmed: bool, trace=None) -> dict:
 
     trace.append(_tt("aml_screen", {"name": p["full_name"], "dob": p["dob"]},
                      {"risk": aml["risk"], "decision": aml["decision"]}))
+    p["aml_decision"] = aml["decision"]   # gate input — the REAL screen result
 
     session["state"] = "await_occupation"
     # Everything else inferred from documents; occupation is the ONLY field we must ask.
@@ -322,16 +376,25 @@ def _step_resolve_identity(session: dict, confirmed: bool, trace=None) -> dict:
 
 def _step_open_account(session: dict) -> dict:
     p = session["profile"]
+    # Pass the REAL AML decision + reconciliation flag through the deterministic
+    # compliance gate. The agent is the maker; the gate is an independent checker.
     res = tools.create_account(p["full_name"], p["pan"], p["aadhaar_last4"],
-                               p["occupation"])
+                               p["occupation"],
+                               aml_decision=p.get("aml_decision", ""),
+                               identity_reconciled=p.get("identity_reconciled", False))
     session["metrics"]["tool_calls"] += 1
+    trace_gate = {"label": "Compliance gate", "detail":
+                  f"Deterministic checker (independent of the LLM): "
+                  f"AML='{p.get('aml_decision','?')}', "
+                  f"identity_reconciled={p.get('identity_reconciled', False)} → "
+                  f"{'PASS — minting account' if res.get('ok') else 'BLOCK — ' + res.get('blocked_by','')}."}
 
     if not res.get("ok"):
         # Account creation failure
         trace = [_tt("create_account",
                       {"full_name": p["full_name"], "occupation": p["occupation"]},
                       {"error": res.get("error", "Account creation failed"),
-                       "status": res.get("status", "ERROR")})]
+                       "status": res.get("status", "ERROR")}), trace_gate]
         trace.append({"label": "Agent reasoning", "detail":
                       "Account creation failed in core banking. This could be a "
                       "system issue. Escalating for manual resolution."})
@@ -341,7 +404,7 @@ def _step_open_account(session: dict) -> dict:
                         trace=trace)
 
     session["state"] = "done"
-    trace = [_tt("create_account",
+    trace = [trace_gate, _tt("create_account",
                  {"full_name": p["full_name"], "occupation": p["occupation"]},
                  {"account_number": res["account_number"], "status": res["status"]})]
     return _respond(session,
@@ -376,7 +439,7 @@ def _handle_live(session: dict, user_text: str) -> dict:
     trace = []
     final_text = ""
     for _ in range(8):  # bounded tool loop
-        data = _anthropic_call(msgs)
+        data = _anthropic_call(msgs, session)
         content = data.get("content", [])
         tool_uses = []
         for block in content:
@@ -416,9 +479,18 @@ def _handle_live(session: dict, user_text: str) -> dict:
                     done=(session["state"] == "done"))
 
 
-def _anthropic_call(messages: list) -> dict:
+def _anthropic_call(messages: list, session: dict = None) -> dict:
+    system = SYSTEM_PROMPT
+    tgt = (session or {}).get("target_language")
+    if tgt:
+        system += (f" IMPORTANT: The customer has chosen {tgt}. Reply ENTIRELY in "
+                   f"{tgt} (natural, warm, spoken style suitable for text-to-speech). "
+                   f"Keep tool calls and reasoning the same; only your customer-facing "
+                   f"replies are in {tgt}.")
+    elif (session or {}).get("lang") == "hi":
+        system += " The customer is using Hindi. Reply in natural spoken Hindi."
     body = json.dumps({
-        "model": MODEL, "max_tokens": 1024, "system": SYSTEM_PROMPT,
+        "model": MODEL, "max_tokens": 1024, "system": system,
         "tools": tools.TOOL_SCHEMAS, "messages": messages,
     }).encode()
     req = urllib.request.Request(
