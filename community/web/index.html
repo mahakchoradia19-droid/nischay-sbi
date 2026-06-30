@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DBT Gap Agent — Community Financial Intelligence · YONO Nexus</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+<header class="top">
+  <div class="brand">
+    <span class="logo">SBI</span>
+    <div>
+      <div class="brand-title">DBT Gap Agent <span class="tag">Community Intelligence</span></div>
+      <div class="brand-sub">The moat private banks cannot enter — they don't have the accounts</div>
+    </div>
+  </div>
+  <div class="moat-pill">🔒 Uncopyable · SBI lead-bank data + national mandate</div>
+</header>
+
+<!-- moat strip -->
+<div class="moat-strip">
+  <div class="moat-claim">
+    <b>One customer → one recommendation</b> is what HDFC/ICICI do.
+    <b>One village → one intervention</b> is what only SBI can do.
+    This agent finds government credits about to bounce back to PFMS unclaimed,
+    across whole districts — and helps citizens <b>receive money they're already owed</b>.
+  </div>
+</div>
+
+<!-- national hero -->
+<section class="national" id="national">
+  <div class="nat-card big">
+    <div class="nat-val" id="natAtRisk">₹—</div>
+    <div class="nat-lbl">at risk of bouncing / going unclaimed <span class="nat-scope">across ~200 SBI lead districts (extrapolated)</span></div>
+  </div>
+  <div class="nat-card">
+    <div class="nat-val" id="natDemoRisk">₹—</div>
+    <div class="nat-lbl">in the 4 live demo districts (computed)</div>
+  </div>
+  <div class="nat-card">
+    <div class="nat-val good" id="natRescue">—%</div>
+    <div class="nat-lbl">rescued when the agent acts</div>
+  </div>
+  <div class="nat-card">
+    <div class="nat-val good" id="natRoi">—×</div>
+    <div class="nat-lbl">ROI — ₹ rescued per ₹ of intervention</div>
+  </div>
+</section>
+
+<div class="layout">
+
+  <!-- district rail -->
+  <aside class="rail">
+    <div class="rail-head">SBI lead-bank districts</div>
+    <div class="rail-sub">Sorted by ₹ at risk this cycle. Pick one to run the loop:</div>
+    <div id="districtList" class="districts"></div>
+  </aside>
+
+  <!-- the loop -->
+  <main class="loop">
+    <div class="empty" id="empty">
+      <div class="empty-ico">🛰️</div>
+      <div>Select a district to run <b>detect → diagnose → act → measure</b>.</div>
+    </div>
+
+    <div id="loopContent" hidden>
+      <div class="loop-head" id="loopHead"></div>
+
+      <!-- DETECT -->
+      <section class="step">
+        <div class="step-tag">1 · DETECT</div>
+        <div class="detect-grid" id="detectGrid"></div>
+      </section>
+
+      <!-- DIAGNOSE -->
+      <section class="step">
+        <div class="step-tag">2 · DIAGNOSE — root cause → remediation</div>
+        <div id="segments" class="segments"></div>
+        <div class="diag-total" id="diagTotal"></div>
+      </section>
+
+      <!-- ACT -->
+      <section class="step">
+        <div class="step-tag">3 · ACT — drafted interventions (cohort scale)</div>
+        <div id="interventions" class="interventions"></div>
+      </section>
+
+      <!-- MEASURE -->
+      <section class="step">
+        <div class="step-tag">4 · MEASURE — honest, calibrated self-evaluation</div>
+        <p class="measure-note" id="measureNote"></p>
+        <div class="measure-grid" id="measureGrid"></div>
+      </section>
+    </div>
+  </main>
+</div>
+
+<footer class="why">
+  <div class="why-head">Why HDFC and ICICI structurally cannot build this</div>
+  <table class="why-table">
+    <tr><th>What it needs</th><th>SBI</th><th>HDFC / ICICI</th></tr>
+    <tr><td>DBT / APBS disbursement visibility</td><td class="y">✅ primary channel</td><td class="n">❌ no access</td></tr>
+    <tr><td>Jan Dhan accounts at village density</td><td class="y">✅ ~53 cr, every district</td><td class="n">❌ urban-concentrated</td></tr>
+    <tr><td>Lead-bank / SLBC mandate to fix gaps</td><td class="y">✅ banker to the nation</td><td class="n">❌ no mandate</td></tr>
+    <tr><td>SHG / cluster account visibility</td><td class="y">✅ primary holder</td><td class="n">❌ marginal</td></tr>
+  </table>
+</footer>
+
+<script src="/app.js"></script>
+</body>
+</html>

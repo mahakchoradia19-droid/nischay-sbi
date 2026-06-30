@@ -33,6 +33,22 @@ A judge asking *"are these four things actually one system?"* gets a real answer
 the same six customers flow across all five pillars, and FinPulse is the shared
 state they read and write.
 
+### Two layers — and the second one is uncopyable
+
+The five pillars above are the **individual layer** (one customer → one action).
+HDFC and ICICI can copy them. The **community layer** cannot be copied:
+
+> **SBI is the only bank that can see, and act on, the financial health of an entire
+> village, cluster, or cohort** — because it is the custodian of India's financial
+> infrastructure (Jan Dhan, the Aadhaar Payment Bridge, DBT). Private banks don't
+> have the accounts, the rails, or the mandate.
+
+The flagship of the community layer is the **DBT Gap Agent** ([`community/`](community/),
+:8005): it finds the government credits about to bounce back to PFMS unclaimed across
+whole districts, diagnoses *why*, drafts the fix, and measures the rescue — helping
+citizens **receive money they are already owed** (not a cross-sell). See
+[`docs/community-layer.md`](docs/community-layer.md).
+
 ---
 
 ## The five pillars
@@ -44,6 +60,7 @@ state they read and write.
 | 3 | **FinPulse** — Money Health Score | [`finpulse/`](finpulse/) | 8004 | The unifying layer: a transparent 0-100 score from 7 weighted dimensions, top-3 actions, and an **Honest Metrics** self-evaluation (calibration curve, Brier, lift). |
 | 4 | **SAARTHI** — Proactive engagement | [`engage/`](engage/) | 8003 | Watches financial rhythms and surfaces one timely nudge in the customer's language ("helps you before you ask"). |
 | 5 | **FinSmart** — Literacy: Arena + Academy | [`finlearn/`](finlearn/) | 8001 | A voice tutor that teaches money in your language with **fresh, computed, never-repeating** questions; plus the gamified Arena. |
+| ★ | **DBT Gap Agent** — Community layer (the moat) | [`community/`](community/) | 8005 | Cohort-scale agent that detects → diagnoses → acts on → measures government credits about to bounce back unclaimed. **HDFC/ICICI structurally cannot build this.** |
 
 Shared infrastructure lives in [`security.py`](security.py) (CORS, rate-limiting,
 input validation, PII masking, session TTL) — used by every pillar.
@@ -81,6 +98,7 @@ python3 run_onboarding.py     # → http://localhost:8000   Onboarding (voice KY
 python3 run_scout.py          # → http://localhost:8002   SCOUT (acquisition)
 python3 run_engage.py         # → http://localhost:8003   SAARTHI (engagement)
 python3 run_finpulse.py       # → http://localhost:8004   FinPulse (health score)
+python3 run_community.py      # → http://localhost:8005   DBT Gap Agent (the moat)
 cd finlearn && python3 game_server.py   # → http://localhost:8001/academy.html
 ```
 
@@ -109,6 +127,7 @@ SBI_hackathon/
 ├── run_scout.py
 ├── run_engage.py
 ├── run_finpulse.py
+├── run_community.py
 │
 ├── onboarding/               Pillar 2 — voice KYC agent (:8000)
 │   ├── app.py  agent.py  tools.py
@@ -121,8 +140,11 @@ SBI_hackathon/
 ├── finlearn/                 Pillar 5 — FinSmart Arena + Academy (:8001)
 │   ├── game_server.py  finance_math.py  question_engine.py  curriculum.py  ai_agents.py
 │   └── web/    (index.html = Arena, academy.html = Academy)
+├── community/                Community layer — DBT Gap Agent, the moat (:8005)
+│   ├── app.py  dbt_engine.py
+│   └── web/
 │
-├── docs/                     architecture · scoring model · product brief · structure
+├── docs/                     architecture · scoring model · product brief · community layer · structure
 └── submission_pack/          judge quickstart, one-pager, demo script
 ```
 
@@ -138,6 +160,8 @@ Every pillar follows the **same shape** (`app.py` server · `agent.py`/engine ·
   dual offline/live path, and the production mapping.
 - [`docs/scoring-model.md`](docs/scoring-model.md) — the FinPulse transparent score
   and the self-evaluation methodology (the part that wins a hostile judge).
+- [`docs/community-layer.md`](docs/community-layer.md) — the DBT Gap Agent and the
+  uncopyable moat (the part that wins the *category*).
 - [`docs/repo-structure.md`](docs/repo-structure.md) — naming conventions and a file map.
 - Each pillar has its own `README.md` with run instructions and key files.
 
