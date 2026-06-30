@@ -22,6 +22,7 @@ stdlib only, fully testable.
 """
 
 import random
+import zlib
 
 INR = lambda x: "₹" + format(int(round(x)), ",d")
 
@@ -81,8 +82,14 @@ _CAUSE_PRIORITY = ["unseeded", "kyc_lapsed", "dormant"]
 
 
 def _gen_cohort(d: dict, seed_offset: int = 0):
-    """Deterministically generate the eligible-account cohort for a district."""
-    rng = random.Random(hash(d["id"]) % 100000 + seed_offset)
+    """Deterministically generate the eligible-account cohort for a district.
+
+    Uses zlib.crc32 rather than Python's built-in hash(): str hashing is
+    randomised per-process by PYTHONHASHSEED, which silently broke determinism
+    across runs (the same district produced different at-risk counts each time
+    the server restarted). crc32 is stable across processes and platforms.
+    """
+    rng = random.Random(zlib.crc32(d["id"].encode()) % 100000 + seed_offset)
     n = d["eligible"]
     # We simulate a representative SAMPLE and scale, so it stays fast at 100k+ scale.
     sample = min(n, 6000)
