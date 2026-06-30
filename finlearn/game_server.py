@@ -17,6 +17,8 @@ from security import add_cors_headers, check_rate_limit, validate_json_body
 
 import game_data
 import ai_agents as ag
+import curriculum
+import question_engine as qe
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 WEB = os.path.join(HERE, "web")
@@ -154,6 +156,57 @@ class Handler(BaseHTTPRequestHandler):
                 ),
                 "badges": len(game_data.BADGES),
             })
+
+        # ── FinSmart Academy — curriculum, voice tutor, agentic quiz ──────
+        if p == "/api/academy/curriculum":
+            return self._json(200, {
+                "modules": curriculum.curriculum_outline(),
+                "concepts": qe.ALL_CONCEPTS,
+                "ai_active": ag.AI_ACTIVE,
+            })
+
+        if p == "/api/academy/lesson":
+            lid = body.get("lesson_id", "")
+            lesson = curriculum.get_lesson(lid)
+            if not lesson:
+                return self._json(404, {"error": f"unknown lesson '{lid}'"})
+            tutor = ag.tutor_agent.teach(lesson, body.get("lang", "en"))
+            view = {k: lesson[k] for k in
+                    ("id", "module", "title", "icon", "minutes", "summary",
+                     "key_points", "worked_example", "concepts")}
+            return self._json(200, {"lesson": view, "tutor": tutor})
+
+        if p == "/api/academy/tutor":
+            lid = body.get("lesson_id", "")
+            lesson = curriculum.get_lesson(lid)
+            if not lesson:
+                return self._json(404, {"error": f"unknown lesson '{lid}'"})
+            return self._json(200, {"tutor": ag.tutor_agent.teach(lesson, body.get("lang", "en"))})
+
+        if p == "/api/academy/quiz":
+            module = body.get("module") or None
+            try:
+                n = max(1, min(10, int(body.get("n", 5))))
+            except (ValueError, TypeError):
+                n = 5
+            concept = body.get("concept") or None
+            if concept:
+                questions = [qe.generate(concept) for _ in range(n)]
+            else:
+                questions = qe.generate_set(n, module=module)
+            return self._json(200, {"questions": questions, "ai": ag.AI_ACTIVE,
+                                    "source": "procedural-engine"})
+
+        if p == "/api/academy/generate":
+            # One fresh question; if a live key is set, occasionally serve a novel
+            # LLM scenario, else the always-correct procedural engine.
+            concept = body.get("concept") or None
+            if ag.AI_ACTIVE and concept:
+                novel = ag.academy_question_agent.novel(concept, body.get("lang", "en"))
+                if novel:
+                    novel["id"] = f"ai-{concept}"
+                    return self._json(200, {"question": novel, "ai": True})
+            return self._json(200, {"question": qe.generate(concept), "ai": False})
 
         self._json(404, {"error": "unknown endpoint"})
 

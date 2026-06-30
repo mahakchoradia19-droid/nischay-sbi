@@ -283,3 +283,75 @@ explainer_agent = ExplainerAgent()
 scenario_agent = ScenarioAgent()
 
 AI_ACTIVE = bool(GEMINI_KEY)
+
+
+# ---------------------------------------------------------------------------
+# Agent 5: TutorAgent — the vernacular voice teacher (FinSmart Academy).
+# Teaches a lesson concept in the learner's language, warm and simple, written
+# to be SPOKEN aloud. Falls back to the curated curriculum script offline so
+# English + Hindi teaching always works with no key.
+# ---------------------------------------------------------------------------
+_LANG_NAMES = {"en": "English", "hi": "Hindi", "ta": "Tamil", "bn": "Bengali",
+               "mr": "Marathi", "te": "Telugu", "gu": "Gujarati", "kn": "Kannada",
+               "pa": "Punjabi"}
+
+
+class TutorAgent:
+    def teach(self, lesson: dict, lang: str = "en") -> dict:
+        """Return spoken teaching text for a lesson in the requested language."""
+        code = (lang or "en").split("-")[0].lower()
+        # Offline-capable languages with a curated script: English + Hindi.
+        if code == "hi" and lesson.get("tutor_hi"):
+            return {"text": lesson["tutor_hi"], "lang": "hi", "ai": False}
+        base = lesson.get("tutor") or lesson.get("summary", "")
+        if code in ("en", "") or (code not in _LANG_NAMES):
+            return {"text": base, "lang": "en", "ai": False}
+        # Other vernaculars: translate-and-teach via the live model if available.
+        if AI_ACTIVE:
+            tgt = _LANG_NAMES.get(code, "English")
+            prompt = (
+                f"You are a warm, reassuring bank tutor speaking aloud to a first-time "
+                f"customer in {tgt}. Re-teach this lesson naturally in {tgt} (spoken style, "
+                f"simple words, no jargon, 5-7 sentences). Keep all facts identical.\n\n"
+                f"Lesson '{lesson.get('title')}': {base}")
+            out = _gemini(prompt, temperature=0.6, max_tokens=700)
+            if out:
+                return {"text": out.strip(), "lang": code, "ai": True}
+        # Honest fallback: English script (the UI notes a key enables this language).
+        if code == "hi" and not lesson.get("tutor_hi"):
+            return {"text": base, "lang": "en", "ai": False}
+        return {"text": base, "lang": "en", "ai": False, "fallback_from": code}
+
+
+class AcademyQuestionAgent:
+    """
+    Agentic fresh-question source. The procedural engine is the reliable core
+    (always correct, infinite, offline); the live model can add novel
+    word-problem scenarios on top when a key is present.
+    """
+    def novel(self, concept: str, lang: str = "en"):
+        if not AI_ACTIVE:
+            return None
+        prompt = (
+            "Create ONE multiple-choice financial-literacy question (Indian context, "
+            f"₹ amounts) about '{concept}'. Return STRICT JSON: "
+            '{"stem": "...", "options": ["..","..","..",".."], "answer": 0, '
+            '"explanation": "..."} with exactly 4 options and answer as the correct index.')
+        out = _gemini(prompt, temperature=0.9, max_tokens=600)
+        if not out:
+            return None
+        try:
+            s = out[out.find("{"): out.rfind("}") + 1]
+            q = json.loads(s)
+            if (isinstance(q.get("options"), list) and len(q["options"]) == 4
+                    and isinstance(q.get("answer"), int) and 0 <= q["answer"] < 4):
+                q.update({"concept": concept, "computed": False, "ai": True,
+                          "difficulty": 2, "module": "money_basics"})
+                return q
+        except (json.JSONDecodeError, ValueError, KeyError):
+            return None
+        return None
+
+
+tutor_agent = TutorAgent()
+academy_question_agent = AcademyQuestionAgent()
