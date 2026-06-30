@@ -27,11 +27,14 @@ VULNERABILITY FIXES:
 
 import json
 import os
+import sys
 import time
 import urllib.request
 import urllib.error
 
-import onboarding_tools as tools
+# shared security module lives at the repo root (one level up from this pillar)
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+import tools
 from security import session_manager, mask_pii
 
 MODEL = os.environ.get("YONO_MODEL", "claude-opus-4-8")

@@ -19,10 +19,14 @@ SECURITY NOTES (vulnerability fixes):
 """
 
 import difflib
+import os as _os
 import random
 import re
+import sys as _sys
 import time
 
+# shared security module lives at the repo root (one level up from this pillar)
+_sys.path.insert(0, _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))))
 from security import mask_pan, mask_aadhaar_last4
 
 # ===========================================================================

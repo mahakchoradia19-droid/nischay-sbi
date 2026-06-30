@@ -9,10 +9,13 @@ SECURITY: CORS, rate limiting, input validation, session expiry, PII masking.
 
 import json
 import os
+import sys
 import uuid
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-import onboarding_agent as agent
+# shared security module lives at the repo root (one level up from this pillar)
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+import agent
 from security import add_cors_headers, check_rate_limit, validate_json_body, log_request
 
 HERE = os.path.dirname(os.path.abspath(__file__))
