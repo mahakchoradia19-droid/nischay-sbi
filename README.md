@@ -153,9 +153,10 @@ Turn your speakers on — the agent talks. The **Hard questions** section answer
 things a judge will probe; the **At scale** section shows the computed district
 numbers and the model's honest self-evaluation.
 
-No API key is needed. (An `ANTHROPIC_API_KEY` would let a live model drive the
-conversation instead of the scripted one; the mechanism and the gate are identical
-either way.)
+No API key, no internet, no accounts — it runs entirely on your machine. The agent's
+dialogue is a fixed, honest script today; in production a live model could drive the
+conversation, and the reactivation gate would refuse to release money on its say-so
+just the same. The point of the gate is that it doesn't trust the talker.
 
 ---
 
@@ -171,14 +172,12 @@ Arrives/
 │   ├── style.css   the design system (warm, editorial, calm)
 │   └── app.js      the rescue state machine + the voice engine + the live trace
 │
-├── docs/
-│   └── PROPOSAL.md the written proposal (plain-language, non-technical readers)
-│
-└── explorations/   the individual-customer build this grew out of — voice
-                    onboarding, a financial-health score, proactive nudges, a
-                    literacy academy. Real and runnable, kept as origin story and
-                    evidence of range, not as competing pillars. See its README.
+└── docs/
+    └── PROPOSAL.md the written proposal (plain-language, for non-technical readers)
 ```
+
+That's the whole thing. No framework, no build step, no hidden services — six files
+you can read end to end in twenty minutes.
 
 **Two things are real, on purpose**, because they are the claims the whole proposal
 rests on: the **name reconciler** in `engine.py` (`fuzzy_name_match`) that self-heals a
@@ -192,9 +191,11 @@ numbers every time you run it.
 
 ## A note on how this was built
 
-This started as an individual-customer product (it's in `explorations/`), and then I
-realised the same machinery — the voice KYC, the fuzzy matcher, the gate, the honest
-metrics — pointed at a bigger problem that only SBI is positioned to solve. Rather than
-pretend it was all one grand design, I'd rather tell you the true version: I built the
-pieces, then found the idea they were really for. This repository is that idea, made as
-sharp as I could make it.
+This started as a broader individual-customer product — voice onboarding, a
+financial-health score, proactive nudges. Building it, I ended up with the pieces that
+turned out to matter: the voice KYC, the fuzzy name matcher, the reactivation gate, the
+honest-metrics discipline. Then I realised those pieces pointed at a bigger problem that
+only SBI is positioned to solve, and I cut everything that wasn't that. Rather than
+pretend it was all one grand design, here's the true version: I built the machinery,
+found the idea it was really for, and made the repository only that. Focus was the
+hardest and most important decision in the whole project.

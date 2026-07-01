@@ -114,7 +114,7 @@ runs into thousands of crore per cycle.
 To be precise about where the line is, because that precision is itself part of
 the pitch:
 
-**Built and runnable today** (Python, zero setup, `python3 run_community.py`):
+**Built and runnable today** (Python, zero setup, `python3 app.py`):
 the full detect → diagnose → act → measure loop, computing real numbers from
 synthetic-but-internally-consistent district data — four demo districts, per-account
 blocker flags, segment-level remediation plans with calibrated rescue rates, drafted
