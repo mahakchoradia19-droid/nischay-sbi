@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Arrives — the bank that makes sure the money arrives</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-mark">Arrives<span class="nav-by"> · YONO Nexus for SBI</span></div>
+  <div class="nav-links">
+    <a href="#rescue">The rescue</a>
+    <a href="#limits">The limits</a>
+    <a href="#scale">At scale</a>
+    <a href="#questions">Hard questions</a>
+  </div>
+</nav>
+
+<!-- ─────────────────────────  HERO  ───────────────────────── -->
+<header class="hero">
+  <div class="hero-inner">
+    <div class="eyebrow">SBI Hackathon · Agentic AI for financial inclusion</div>
+    <h1>The bank that makes sure<br>the money <em>arrives</em>.</h1>
+    <p class="lede">
+      Every cycle, the government sends money straight into people's accounts —
+      for farmers, workers, students. It's already approved. For millions of people
+      in rural India, it never lands, for one small, fixable reason. This is the system
+      that notices, and fixes it, before the money turns around and goes home.
+    </p>
+    <div class="hero-cta">
+      <a href="#rescue" class="btn btn-primary">See a rescue happen</a>
+      <span class="hero-note">A real voice agent. Live, in this browser.</span>
+    </div>
+  </div>
+</header>
+
+<!-- ─────────────────────────  RAMESH  ───────────────────────── -->
+<section class="band">
+  <div class="col">
+    <h2 class="section-h">Meet Ramesh.</h2>
+    <p class="body-lg">
+      Ramesh is a farmer. Last week the government approved his <b>₹2,000</b> support
+      payment — money he is entitled to, money that has already been sent.
+      <b>It never reached him.</b>
+    </p>
+    <p class="body">
+      Not fraud. Not a mistake he made. His bank account had quietly gone to sleep
+      months ago from lack of use, and his ID verification had lapsed. So when the
+      money came knocking, the door was shut. The payment turned around and went back
+      to the government. Ramesh doesn't even know it happened. Next season, it will
+      happen again.
+    </p>
+    <p class="body">
+      There are millions of Rameshes. The bank's computers can see this coming.
+      Today, nobody uses that to help. <b>That is the entire gap.</b>
+    </p>
+  </div>
+</section>
+
+<!-- ─────────────────────────  THE RESCUE  ───────────────────────── -->
+<section id="rescue" class="rescue">
+  <div class="rescue-head">
+    <h2 class="section-h center">Ramesh's ninety seconds</h2>
+    <p class="body center muted">
+      The detection is a simple, auditable check — that part is meant to be boring.
+      The hard part, the part that genuinely needs AI, is the last hundred metres:
+      fixing his account without a branch visit, in his own language. Watch it work.
+    </p>
+    <div class="voice-controls">
+      <label class="lang-pick">🌐
+        <select id="lang">
+          <option value="hi-IN" data-code="hi" selected>हिंदी (Hindi)</option>
+          <option value="en-IN" data-code="en">English</option>
+        </select>
+      </label>
+      <button id="voiceToggle" class="chip on">🔊 Voice on</button>
+    </div>
+  </div>
+
+  <div class="stage">
+    <!-- phone -->
+    <div class="phone-wrap">
+      <div class="phone">
+        <div class="phone-notch"></div>
+        <div class="phone-screen" id="screen"><!-- steps render here --></div>
+      </div>
+      <div class="phone-orb" id="orb"><span></span><span></span><span></span><span></span><span></span></div>
+    </div>
+
+    <!-- narration + real trace -->
+    <div class="narrate">
+      <div class="step-track" id="stepTrack"></div>
+      <div class="trace-card">
+        <div class="trace-title">What's actually happening <span class="trace-real">real, on the server</span></div>
+        <div id="trace" class="trace-body"><div class="trace-empty">Press start — the steps and the real logic appear here.</div></div>
+      </div>
+      <div class="stage-controls">
+        <button id="startBtn" class="btn btn-primary">▶ Start the rescue</button>
+        <button id="resetBtn" class="btn btn-ghost" hidden>↻ Replay</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─────────────────────────  THE LIMITS  ───────────────────────── -->
+<section id="limits" class="band tint">
+  <div class="col">
+    <h2 class="section-h">The 20% we <em>can't</em> fix — and why saying so matters.</h2>
+    <p class="body">
+      A system that pretends it can rescue everyone is a system that hasn't met the
+      real world. Ours names its own limits, and hands those cases to a human on
+      purpose. This is not a weakness in the pitch. It's the strongest thing in it.
+    </p>
+    <div class="limit-grid" id="limitGrid"></div>
+  </div>
+</section>
+
+<!-- ─────────────────────────  AT SCALE  ───────────────────────── -->
+<section id="scale" class="band">
+  <div class="col">
+    <h2 class="section-h">One Ramesh, then a district.</h2>
+    <p class="body">
+      The same check, run across an entire district ahead of a payment cycle. These
+      numbers are <b>computed</b> from the model, not typed in — and the model grades
+      itself honestly below.
+    </p>
+    <div class="scale-grid" id="scaleGrid"></div>
+
+    <div class="metrics-block">
+      <h3 class="sub-h">We score ourselves, including the unflattering numbers</h3>
+      <p class="body muted" id="metricsNote"></p>
+      <div class="metrics-row" id="metricsRow"></div>
+      <div class="calib">
+        <svg viewBox="0 0 300 300" id="calibChart" class="calib-svg"></svg>
+        <div class="calib-legend">
+          <div><span class="ck diag"></span> Perfect calibration</div>
+          <div><span class="ck line"></span> Our model — actual bounce rate per confidence band</div>
+          <div class="calib-read" id="eceRead"></div>
+          <p class="tiny muted">A model you can trust hugs the dotted line: when it says
+            "70% likely to bounce", roughly 70% actually bounce.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─────────────────────────  HARD QUESTIONS  ───────────────────────── -->
+<section id="questions" class="band tint">
+  <div class="col">
+    <h2 class="section-h">The questions you're going to ask.</h2>
+    <p class="body muted">Answered before you ask them — because pre-empting the hard question is the whole game.</p>
+    <div class="qa">
+      <details open>
+        <summary>Why hasn't SBI already done this, if it's so obvious?</summary>
+        <p>Because the pieces sit in different rooms that don't talk. The team that
+        reconciles bounced payments, the team that handles KYC, and the team that
+        reaches customers are separate — and <b>nobody owns "the gap" itself.</b>
+        Branches aren't even measured on rescued payments, so no one chases it. And
+        the one genuinely missing piece — a cheap way to fix an account at the last
+        mile, in the person's language, with no human at a counter — simply
+        <b>didn't exist until voice AI got good enough.</b> The idea isn't new because
+        we're clever; it's newly <em>possible</em>.</p>
+      </details>
+      <details>
+        <summary>Is it even allowed to use people's data this way?</summary>
+        <p>This is the most defensible possible use of it. We aren't mining data to
+        sell anything — we're using it to deliver a citizen <b>their own entitlement</b>,
+        the exact purpose the data was entrusted for. It's structured so the
+        scheme/government side is the reason the outreach exists, with SBI as the
+        executor of a delivery it is already mandated to perform. "Consent" and
+        "use it only for the purpose it was given" aren't obstacles here — they're
+        satisfied by the nature of what we do.</p>
+      </details>
+      <details>
+        <summary>Why is this an AI project and not a database query?</summary>
+        <p>The detection <em>is</em> basically a query — deliberately, so a regulator
+        can audit it. The AI is concentrated in exactly one place: having a real,
+        patient, multilingual conversation that fixes a broken account without a
+        branch visit, and self-heals the small document mismatches that normally
+        dead-end these flows. That's the thing a spreadsheet can't do and a call
+        centre can't afford. We claim AI <b>narrowly and precisely</b>, right where
+        the human problem is hardest.</p>
+      </details>
+    </div>
+  </div>
+</section>
+
+<!-- ─────────────────────────  ONLY SBI + ASK  ───────────────────────── -->
+<section class="band">
+  <div class="col">
+    <h2 class="section-h">Why only SBI can build this.</h2>
+    <p class="body">Any bank can build a nicer app. This depends on things a private bank cannot buy.</p>
+    <table class="moat">
+      <thead><tr><th>What it needs</th><th>SBI</th><th>HDFC / ICICI</th></tr></thead>
+      <tbody>
+        <tr><td>Sees the government's payments</td><td class="y">Yes — a primary pipeline</td><td class="n">No equivalent access</td></tr>
+        <tr><td>Accounts in every village</td><td class="y">~53 crore, nationwide</td><td class="n">Urban-concentrated</td></tr>
+        <tr><td>The mandate to fix the gap</td><td class="y">Banker to the nation</td><td class="n">No such mandate</td></tr>
+      </tbody>
+    </table>
+
+    <div class="ask">
+      <h3 class="sub-h">What's real today — and the ask</h3>
+      <p class="body">
+        The whole loop — the noticing, the sorting by cause, the voice agent that
+        reactivates an account, and an honest scorecard that reports its own misses —
+        is <b>built and running</b>, on realistic sample data (we don't have SBI's real
+        data). The logic and the voice are real; only the people are simulated. We'd
+        rather show a real system on fake data than a fake system on real promises.
+      </p>
+      <p class="body">
+        <b>The ask:</b> run this for real, in one limited area, for one payment cycle —
+        with properly permissioned data — and measure it the honest way. Not just "how
+        many did we rescue," but the number that actually matters:
+        <b>six months later, is the account still active, and did the next payment land
+        on its own?</b> Because the win isn't rescuing the money once. It's making sure
+        Ramesh never misses it again.
+      </p>
+      <p class="closer">SBI already holds the nation's money.<br><em>This makes SBI the bank that guarantees it arrives.</em></p>
+    </div>
+  </div>
+</section>
+
+<footer class="foot">
+  <div>Built by Mahak Choradia · YONO Nexus</div>
+  <div class="foot-note">The individual-customer version of this system (voice onboarding, a
+    financial-health score, proactive nudges, a literacy academy) is in
+    <code>/explorations</code> — the earlier build this grew out of.</div>
+</footer>
+
+<script src="/app.js"></script>
+</body>
+</html>

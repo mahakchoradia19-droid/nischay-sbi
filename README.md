@@ -1,180 +1,200 @@
-# YONO Nexus — the intelligence layer for SBI
+# Arrives — the bank that makes sure the money arrives
 
-**SBI Hackathon submission · Agentic AI for customer acquisition, digital adoption & engagement**
-**Team:** Mahak Choradia
+**An SBI Hackathon project · Mahak Choradia**
 
-> SBI already owns the raw materials to leapfrog HDFC and ICICI — 500M customers,
-> the largest transaction dataset in India, Jan Dhan rails, and YONO's install base.
-> What's missing is the **intelligence layer** between those assets and the customer.
-> **YONO Nexus is that layer** — five agents tied together by one transparent,
-> self-evaluated score.
+There is a quiet, expensive problem hiding inside India's welfare system, and it has
+nothing to do with corruption or leakage. It's this: the government sends money to
+people who are entitled to it, and a lot of the time, **the money doesn't arrive** —
+not because anyone stole it, but because the person's bank account had a small,
+fixable problem, and nobody noticed in time.
 
-Everything here is **runnable today** with `python3` and the standard library — no
-pip, no npm, no Docker, no cloud accounts. The agentic behaviour, the financial
-maths, the compliance gate, and the metrics are **computed, not mocked**.
+This project is a working system that notices, and fixes it, before the money turns
+around and goes home. It is deliberately built around **one idea done properly**,
+because that idea happens to be one only SBI can act on.
 
----
-
-## The one idea
-
-Most submissions are four disconnected demos. YONO Nexus is **one product with one
-spine** — the **FinPulse Money Health Score**. Every agent reads from or writes to it:
-
-```
-  SCOUT            ONBOARDING          FINPULSE            SAARTHI            ACADEMY
-  acquire    →     open account   →    score (0-100)  →   act on the    →    teach the
-  the right        by voice,           transparent,       weakest            concept behind
-  customer         self-healing KYC    self-evaluated     dimension          that dimension
-     │                  │                   │                  │                  │
-     └──────────────────┴─────── one customer, one score, one journey ──────────┘
-```
-
-A judge asking *"are these four things actually one system?"* gets a real answer:
-the same six customers flow across all five pillars, and FinPulse is the shared
-state they read and write.
-
-### Two layers — and the second one is uncopyable
-
-The five pillars above are the **individual layer** (one customer → one action).
-HDFC and ICICI can copy them. The **community layer** cannot be copied:
-
-> **SBI is the only bank that can see, and act on, the financial health of an entire
-> village, cluster, or cohort** — because it is the custodian of India's financial
-> infrastructure (Jan Dhan, the Aadhaar Payment Bridge, DBT). Private banks don't
-> have the accounts, the rails, or the mandate.
-
-The flagship of the community layer is the **DBT Gap Agent** ([`community/`](community/),
-:8005): it finds the government credits about to bounce back to PFMS unclaimed across
-whole districts, diagnoses *why*, drafts the fix, and measures the rescue — helping
-citizens **receive money they are already owed** (not a cross-sell). See
-[`docs/community-layer.md`](docs/community-layer.md).
+If you want to skip straight to it: `python3 app.py`, then open
+[http://localhost:8000](http://localhost:8000). The centrepiece is a voice agent that
+reactivates a farmer's account, live, in Hindi, in your browser. Everything below
+explains why that ninety seconds matters more than it looks.
 
 ---
 
-## The five pillars
+## Meet Ramesh (because a number is forgettable and a person is not)
 
-| # | Pillar | Dir | Port | What it does |
-|---|--------|-----|------|--------------|
-| 1 | **SCOUT** — Acquisition agent | [`scout/`](scout/) | 8002 | Identifies & scores prospects across 3 channels (dormant Jan Dhan, employer partnerships, life-event detection) and drafts hyper-personalised outreach. |
-| 2 | **Onboarding** — Voice KYC agent | [`onboarding/`](onboarding/) | 8000 | Opens a compliant account by **voice conversation** (TTS + STT, multilingual), self-heals a name mismatch, and passes a **deterministic AML/KYC compliance gate**. |
-| 3 | **FinPulse** — Money Health Score | [`finpulse/`](finpulse/) | 8004 | The unifying layer: a transparent 0-100 score from 7 weighted dimensions, top-3 actions, and an **Honest Metrics** self-evaluation (calibration curve, Brier, lift). |
-| 4 | **SAARTHI** — Proactive engagement | [`engage/`](engage/) | 8003 | Watches financial rhythms and surfaces one timely nudge in the customer's language ("helps you before you ask"). |
-| 5 | **FinSmart** — Literacy: Arena + Academy | [`finlearn/`](finlearn/) | 8001 | A voice tutor that teaches money in your language with **fresh, computed, never-repeating** questions; plus the gamified Arena. |
-| ★ | **DBT Gap Agent** — Community layer (the moat) | [`community/`](community/) | 8005 | Cohort-scale agent that detects → diagnoses → acts on → measures government credits about to bounce back unclaimed. **HDFC/ICICI structurally cannot build this.** |
+Ramesh is a farmer. Last week the government approved his ₹2,000 support payment.
+It never reached him. Not fraud, not a mistake he made — his account had gone dormant
+from disuse and his ID verification (KYC) had quietly expired. So when the money came
+knocking, the door was shut. The payment bounced back to the government. Ramesh
+doesn't even know it happened. Next season, it will happen again.
 
-Shared infrastructure lives in [`security.py`](security.py) (CORS, rate-limiting,
-input validation, PII masking, session TTL) — used by every pillar.
+There are millions of Rameshes. The reasons are always small and always the same:
 
----
+- the account went **dormant** (unused for months), so the money lands but is never noticed,
+- the **Aadhaar was never properly linked** in the system that routes these payments, so the credit is rejected outright,
+- or the **KYC lapsed**, freezing the account against new money.
 
-## Why this is different (and defensible)
-
-Three things almost no competing team will show:
-
-1. **Real compliance, not theatre.** Account creation passes a deterministic gate
-   that *physically refuses* unless AML cleared and identity reconciled — even when
-   the LLM drives the flow. Idempotent per PAN. (See [`onboarding/tools.py`](onboarding/tools.py).)
-
-2. **Honest, self-evaluated metrics.** FinPulse scores *itself*: precision@k, lift
-   over base rate, Brier score, and a **calibration curve** — and deliberately
-   exposes raw accuracy as misleading. When a judge asks "are your numbers real?",
-   the answer is a calibration chart. (See [`finpulse/evaluation.py`](finpulse/evaluation.py)
-   and [`docs/scoring-model.md`](docs/scoring-model.md).)
-
-3. **Voice-first, vernacular-first.** The onboarding agent and the Academy tutor
-   *speak and listen* in the customer's language — English + Hindi fully offline,
-   seven more via the live model, with an honest English fallback (never a faked
-   translation).
+None of these is the person's fault, and none is hard to fix — *if someone notices
+before the payment cycle runs.* Today, nobody does. **That gap is the entire problem,
+and closing it is the entire project.**
 
 ---
 
-## Quick start
+## Why this is an SBI idea, and not a fintech idea
 
-Requirements: **Python 3.9+. Nothing else.** Best viewed in Chrome (voice uses the
-Web Speech API). Start any pillar from the repo root:
+Any bank can build a nicer app. If that were the pitch, HDFC or ICICI would copy it
+within a year, with bigger budgets. This is different, because it rests on three
+things a private bank simply cannot buy:
+
+| What closing this gap requires | SBI | HDFC / ICICI |
+|---|---|---|
+| Seeing the government's payments as they route | ✅ a primary pipeline for direct benefit transfers | ❌ no equivalent access |
+| Accounts at village-level density | ✅ tens of crores, in every district | ❌ urban-concentrated |
+| The mandate to fix inclusion gaps | ✅ banker to the nation, by role | ❌ no such mandate exists |
+
+So this isn't a UX race SBI might lose to someone faster. It's a problem **only SBI is
+positioned to solve at all** — and, just as importantly, it isn't a sales pitch. The
+system sells nothing. It gets people money that is already theirs. That is a more
+trustworthy thing for a bank to do with its data than "use AI to cross-sell," and it
+is the honest reading of what "banker to the nation" should mean.
+
+---
+
+## How it actually works — and where the real technology is
+
+Here's the honest part most AI pitches skip: **most of this doesn't need AI, and that
+is good.** Spotting which accounts are about to bounce a payment is a careful database
+check — simple, auditable, the kind of thing a regulator can inspect line by line. We
+*want* that part boring.
+
+The hard part — the part that genuinely needs AI — is **the last hundred metres:
+actually fixing Ramesh's account without asking him to travel to a branch, in a
+language he speaks.** That is where the real engineering went, and it's what the demo
+shows working:
+
+1. **Notice** — before the payment cycle, flag that Ramesh's account will bounce, and *why*.
+2. **Reach** — contact him the way he actually communicates: a message and a call in his own language, not an English app notification he'll ignore.
+3. **Reactivate by voice** — he taps a link and a voice agent talks to him in Hindi, walks him through re-verifying his identity out loud, reads his document, and **self-heals the small mismatch** that normally dead-ends these flows (his Aadhaar says "Ramesh Kumar", his other document says "Ramesh Kumar Verma" — the system recognises these as the same person and asks one confirming question instead of failing). Then it reactivates the account.
+4. **The money lands.** The door was open when it knocked.
+
+That voice conversation is the load-bearing piece, and it's the piece that *only
+recently became possible* — before, this needed a human at a branch counter, so it
+never scaled. That's the unlock, and it's what you can try live in the browser.
+
+---
+
+## The five things that push this past "a good idea"
+
+Anyone can have the idea. These are the details that separate a proposal from a
+product, and each one is built into the demo:
+
+**1. One thing is genuinely real, not simulated.**
+The voice agent uses your browser's real speech engine to *speak and listen*, and the
+name-reconciliation and the reactivation decision are **real code running on the
+server** — you can see the actual match score in the live trace. The reconciler
+generalises to any pair of names, so it works on yours, not just Ramesh's. One
+authentic, un-fakeable moment defeats the suspicion every judge silently carries.
+
+**2. The demo is one human's ninety seconds, not a dashboard.**
+You watch a rescue *happen* — the payment about to bounce, the message arriving, the
+conversation, the account waking up, the money landing. Dashboards inform; a rescue is
+remembered.
+
+**3. It shows the 20% it *can't* fix.**
+A system that claims to save everyone hasn't met the real world. This one names its
+limits out loud — the person with no phone, the person whose two documents carry
+genuinely different names — and hands those cases to a human or a banking camp on
+purpose. Volunteering the boundary of your own system is the strongest signal of
+maturity there is, and almost no one does it.
+
+**4. It scores itself honestly, including the unflattering numbers.**
+The "at-risk" prediction is evaluated on a labelled backtest and reports a calibration
+curve, a Brier score, and precision on the riskiest cases — and it explicitly points
+out that *raw accuracy is misleading* (it looks high only because most accounts don't
+bounce). Reporting the number that makes you look worse is how you earn the one that
+makes you look good.
+
+**5. It answers the hard questions before they're asked.**
+*Why hasn't SBI already done this? Is it even allowed? Why is this AI and not a
+spreadsheet?* All three are answered plainly on the page, because pre-empting the
+question a judge is proud to ask is the whole game.
+
+---
+
+## What's real today, and what I'm asking for
+
+**Honestly:** the entire loop — the noticing, the sorting by cause, the voice agent
+that reactivates an account, and the honest scorecard that reports its own misses — is
+**built and running**, on realistic but synthetic sample data, because I don't have
+SBI's real data. **The logic and the voice are real; only the people are simulated.**
+I'd rather show a real system on fake data than a fake system on real promises.
+
+**The ask:** run this for real, in one limited area, for one payment cycle — with
+properly permissioned data — and measure it the honest way. Not just "how many did we
+rescue," but the number that actually matters: **six months later, is the account
+still active, and did the next payment land on its own?** Because the win isn't
+rescuing the money once. It's making sure Ramesh never misses it again.
+
+> SBI already holds the nation's money.
+> **This makes SBI the bank that guarantees it arrives.**
+
+---
+
+## Running it
+
+Requirements: **Python 3.9+. Nothing else** — no pip, no npm, no build step. Best in
+Chrome, because the voice agent uses the browser's Web Speech API.
 
 ```bash
-python3 run_onboarding.py     # → http://localhost:8000   Onboarding (voice KYC)
-python3 run_scout.py          # → http://localhost:8002   SCOUT (acquisition)
-python3 run_engage.py         # → http://localhost:8003   SAARTHI (engagement)
-python3 run_finpulse.py       # → http://localhost:8004   FinPulse (health score)
-python3 run_community.py      # → http://localhost:8005   DBT Gap Agent (the moat)
-cd finlearn && python3 game_server.py   # → http://localhost:8001/academy.html
+python3 app.py        # → http://localhost:8000
 ```
 
-**Suggested judge path:** FinPulse (`:8004`) first — pick a customer, read the
-transparent breakdown, then open the **Honest Metrics** tab. Then watch the same
-customer's story in Onboarding, SAARTHI, and the Academy.
+Then: scroll to **The rescue**, press **Start**, and let Ramesh's account get fixed.
+Turn your speakers on — the agent talks. The **Hard questions** section answers the
+things a judge will probe; the **At scale** section shows the computed district
+numbers and the model's honest self-evaluation.
 
-### Optional AI enhancement
-- `ANTHROPIC_API_KEY` — onboarding/SCOUT/SAARTHI hand the same tools to Claude
-  (Opus 4.8), which plans and calls them itself. Without a key, a deterministic
-  path produces identical user-facing output.
-- `GEMINI_API_KEY` (free, no card) — activates the Academy's live tutor for the
-  seven additional vernaculars and novel question scenarios.
-
-Everything works fully **without any key**.
+No API key is needed. (An `ANTHROPIC_API_KEY` would let a live model drive the
+conversation instead of the scripted one; the mechanism and the gate are identical
+either way.)
 
 ---
 
-## Repository structure
+## What's in here
 
 ```
-SBI_hackathon/
-├── README.md                 ← you are here
-├── security.py               ← shared middleware (CORS, rate-limit, PII masking)
-├── run_onboarding.py         ← root launchers (one per pillar)
-├── run_scout.py
-├── run_engage.py
-├── run_finpulse.py
-├── run_community.py
+Arrives/
+├── app.py          the server (Python standard library, ~90 lines)
+├── engine.py       the real logic: name reconciliation, the reactivation gate,
+│                   the cohort maths, and the honest-metrics backtest
+├── web/            the single-page experience
+│   ├── index.html  the narrative + the interactive rescue
+│   ├── style.css   the design system (warm, editorial, calm)
+│   └── app.js      the rescue state machine + the voice engine + the live trace
 │
-├── onboarding/               Pillar 2 — voice KYC agent (:8000)
-│   ├── app.py  agent.py  tools.py
-│   └── web/    (index.html, app.js, style.css)
-├── scout/                    Pillar 1 — acquisition agent (:8002)
-├── engage/                   Pillar 4 — SAARTHI proactive engagement (:8003)
-├── finpulse/                 Pillar 3 — Money Health Score (:8004)
-│   ├── app.py  finpulse.py  evaluation.py  profiles.py
-│   └── web/
-├── finlearn/                 Pillar 5 — FinSmart Arena + Academy (:8001)
-│   ├── game_server.py  finance_math.py  question_engine.py  curriculum.py  ai_agents.py
-│   └── web/    (index.html = Arena, academy.html = Academy)
-├── community/                Community layer — DBT Gap Agent, the moat (:8005)
-│   ├── app.py  dbt_engine.py
-│   └── web/
+├── docs/
+│   └── PROPOSAL.md the written proposal (plain-language, non-technical readers)
 │
-├── docs/                     architecture · scoring model · product brief · community layer · structure
-└── submission_pack/          judge quickstart, one-pager, demo script
+└── explorations/   the individual-customer build this grew out of — voice
+                    onboarding, a financial-health score, proactive nudges, a
+                    literacy academy. Real and runnable, kept as origin story and
+                    evidence of range, not as competing pillars. See its README.
 ```
 
-Every pillar follows the **same shape** (`app.py` server · `agent.py`/engine ·
-`tools.py` · `web/` frontend) so the repo is predictable to navigate.
+**Two things are real, on purpose**, because they are the claims the whole proposal
+rests on: the **name reconciler** in `engine.py` (`fuzzy_name_match`) that self-heals a
+document mismatch and generalises to any name, and the **reactivation gate**
+(`reactivate`) that will not release a payment unless identity is genuinely reconciled
+and screening is clear — a decision an LLM driving the conversation cannot talk its way
+past. Everything else is computed deterministically, so the same demo produces the same
+numbers every time you run it.
 
 ---
 
-## Documentation
+## A note on how this was built
 
-- [`docs/product-brief.md`](docs/product-brief.md) — the thesis and the conversion loop.
-- [`docs/architecture.md`](docs/architecture.md) — how the five pillars fit, the
-  dual offline/live path, and the production mapping.
-- [`docs/scoring-model.md`](docs/scoring-model.md) — the FinPulse transparent score
-  and the self-evaluation methodology (the part that wins a hostile judge).
-- [`docs/community-layer.md`](docs/community-layer.md) — the DBT Gap Agent and the
-  uncopyable moat (the part that wins the *category*).
-- [`docs/repo-structure.md`](docs/repo-structure.md) — naming conventions and a file map.
-- Each pillar has its own `README.md` with run instructions and key files.
-
----
-
-## Status & honesty
-
-Built and verified: voice onboarding + real compliance gate; SCOUT; SAARTHI;
-FinSmart Academy (real finance maths + procedural fresh-question engine, 1000-question
-correctness sweep clean); FinPulse score + self-evaluation. All five pillars import
-cleanly and serve over HTTP.
-
-Synthetic-but-honest: customer profiles and the evaluation backtest are synthetic
-and **labelled as such** — they exercise real algorithms (the score and the metrics
-are computed, the same interfaces accept real warehouse data in production). We
-report the unflattering metrics alongside the flattering ones on purpose.
+This started as an individual-customer product (it's in `explorations/`), and then I
+realised the same machinery — the voice KYC, the fuzzy matcher, the gate, the honest
+metrics — pointed at a bigger problem that only SBI is positioned to solve. Rather than
+pretend it was all one grand design, I'd rather tell you the true version: I built the
+pieces, then found the idea they were really for. This repository is that idea, made as
+sharp as I could make it.
