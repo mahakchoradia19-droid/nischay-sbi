@@ -41,11 +41,11 @@ and closing it is the entire project.**
 
 ## Why this is an SBI idea, and not a fintech idea
 
-Any bank can build a nicer app. If that were the pitch, HDFC or ICICI would copy it
-within a year, with bigger budgets. This is different, because it rests on three
-things a private bank simply cannot buy:
+Any bank can build a nicer app. If that were the pitch, a well-funded private bank
+would copy it within a year. This is different, because it rests on three things a
+private bank simply cannot buy:
 
-| What closing this gap requires | SBI | HDFC / ICICI |
+| What closing this gap requires | SBI | A private bank |
 |---|---|---|
 | Seeing the government's payments as they route | ✅ a primary pipeline for direct benefit transfers | ❌ no equivalent access |
 | Accounts at village-level density | ✅ tens of crores, in every district | ❌ urban-concentrated |

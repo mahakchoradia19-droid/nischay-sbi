@@ -38,11 +38,10 @@ watching it proactively. SBI's systems see the failure happen. They do not act o
 
 This is the part that makes the idea strategically sharp, not just useful.
 
-HDFC and ICICI can match SBI on app design, AI chatbots, even voice banking, within
-a year, with bigger budgets. What they **cannot** match is data they don't have
-access to:
+A well-funded private bank can match SBI on app design, AI chatbots, even voice
+banking, within a year. What they **cannot** match is data they don't have access to:
 
-| What this needs | SBI | HDFC / ICICI |
+| What this needs | SBI | A private bank |
 |---|---|---|
 | Visibility into DBT/APBS disbursement and rejection | ✅ — SBI is a primary DBT-receiving bank | ❌ no equivalent access |
 | Jan Dhan accounts at village-level density | ✅ — ~53 crore accounts, every district | ❌ urban-concentrated, thin in rural India |
