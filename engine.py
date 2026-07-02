@@ -14,9 +14,11 @@ the proposal:
      identity is genuinely reconciled and screening is clear. The conversation can be
      driven by an LLM, but it cannot talk its way past this gate.
 
-Everything else (the cohort numbers, the honest-metrics backtest) is COMPUTED from
-per-account flags, deterministically, so the same demo yields the same numbers every
-run. Stdlib only.
+Everything else (the cohort numbers, the self-evaluation) is COMPUTED from per-account
+flags, deterministically, so the same demo yields the same numbers every run. To be
+precise: the metrics are a SIMULATION of outcomes, not a real labelled backtest — the
+same code accepts real outcome labels in production; here the labels are generated.
+Stdlib only.
 """
 
 import difflib
@@ -66,6 +68,34 @@ PEOPLE = {
 
 def get_person(pid):
     return PEOPLE.get(pid)
+
+
+_ROUTE = {
+    "voice": ("Voice re-KYC", "Fixable now, self-serve — the agent reactivates it by phone"),
+    "camp":  ("Banking camp", "Needs a person: Aadhaar re-linking / no phone → next village camp"),
+    "human": ("Human officer", "Genuine identity conflict → escalated, not auto-reactivated"),
+}
+
+
+def queue():
+    """The district work-queue: every at-risk account this cycle, its blocker(s),
+    the route that can fix it, and the amount at stake. This is the operational view —
+    an agent triaging a cohort, not just one story."""
+    out = []
+    for pid in PEOPLE:
+        d = diagnose_person(pid)
+        route_label, route_note = _ROUTE[d["fixable"]]
+        out.append({
+            "id": d["id"], "name": d["name"], "scheme": d["scheme"], "amount": d["amount"],
+            "blockers": [r["code"] for r in d["reasons"]],
+            "blocker_text": "; ".join(r["text"].split(" — ")[0] for r in d["reasons"]),
+            "route": d["fixable"], "route_label": route_label, "route_note": route_note,
+            "reachable": d["reachable"],
+        })
+    # voice-fixable first (the ones the agent handles live), then camp, then human
+    order = {"voice": 0, "camp": 1, "human": 2}
+    out.sort(key=lambda x: order.get(x["route"], 9))
+    return out
 
 
 def diagnose_person(pid):
@@ -256,7 +286,8 @@ def honest_metrics(n=1500, seed=11):
         "n": n, "base_rate": round(base, 3), "raw_accuracy": round(raw, 3),
         "precision_at_10pct": round(prec, 3), "lift": round(prec / base, 2) if base else 0,
         "brier": round(brier, 4), "calibration": buckets, "ece": ece,
-        "note": (f"Raw accuracy ({raw:.0%}) looks good only because most accounts don't "
+        "note": (f"On a simulated cycle (synthetic outcomes, shown honestly as such): "
+                 f"raw accuracy ({raw:.0%}) looks good only because most accounts don't "
                  f"bounce (base rate {base:.0%}). The number that matters is precision on the "
                  f"riskiest 10% — {prec:.0%}, i.e. {round(prec/base,1)}× better than chance — "
                  f"and a Brier score of {brier:.3f} with the predicted-vs-actual curve tracking "

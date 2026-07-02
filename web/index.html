@@ -9,7 +9,7 @@
 <body>
 
 <nav class="nav">
-  <div class="nav-mark">Arrives<span class="nav-by"> · YONO Nexus for SBI</span></div>
+  <div class="nav-mark">Arrives<span class="nav-by"> · for SBI</span></div>
   <div class="nav-links">
     <a href="#rescue">The rescue</a>
     <a href="#limits">The limits</a>
@@ -55,6 +55,24 @@
     <p class="body">
       There are millions of Rameshes. The bank's computers can see this coming.
       Today, nobody uses that to help. <b>That is the entire gap.</b>
+    </p>
+  </div>
+</section>
+
+<!-- ─────────────────────────  THE QUEUE  ───────────────────────── -->
+<section class="band tint">
+  <div class="col">
+    <h2 class="section-h">Ramesh is one name in a morning's queue.</h2>
+    <p class="body">
+      Before a payment cycle runs, the system lines up every account that's about to
+      fail — what's wrong with each, and who can fix it. Most are fixable by voice in
+      seconds. The rest are handed to a human, on purpose. This is the operational view:
+      an agent triaging a cohort, not a single lucky story.
+    </p>
+    <div class="queue" id="queue"></div>
+    <p class="tiny muted" style="margin-top:14px">
+      Four illustrative people shown; in production this is the district's full at-risk
+      list for the cycle, ranked by what's fixable now.
     </p>
   </div>
 </section>
@@ -183,6 +201,32 @@
         centre can't afford. We claim AI <b>narrowly and precisely</b>, right where
         the human problem is hardest.</p>
       </details>
+      <details>
+        <summary>Doesn't "fix your KYC by talking" break RBI's rules?</summary>
+        <p>No — and we're precise about this: the conversation <b>re-skins the
+        mandatory steps, it doesn't remove them.</b> The same verification RBI
+        requires still happens — identity checked against documents, screening run,
+        every step logged — the voice is just a friendlier front door to it. And the
+        agent <b>never moves money.</b> It only unblocks the account; the credit
+        itself arrives from the government through the existing payment rails. The
+        reactivation gate is deterministic code: no reactivation without a
+        reconciled identity, a clear screen, and the person's explicit confirmation.
+        The talker can't overrule the gate — by design.</p>
+      </details>
+      <details>
+        <summary>Isn't it risky to point AI at the people least able to catch its mistakes?</summary>
+        <p>That's the most important question here, and the design answers it
+        structurally rather than with promises. The agent's action space is
+        <b>tiny and closed</b> — it can verify identity and reactivate an account;
+        it cannot transfer money, sell a product, or change anything else. Every
+        consequential decision runs through <b>deterministic code, not the model's
+        judgment</b>. Anything ambiguous — an unclear reply, a genuine document
+        conflict, low confidence — <b>defaults to a human being</b>, not to the AI
+        pushing through. And the worst case of a wrong answer is a payment that
+        stays exactly as blocked as it already was. We built the system so that the
+        person who can least afford an AI mistake is the person the AI can least
+        affect.</p>
+      </details>
     </div>
   </div>
 </section>
@@ -224,7 +268,7 @@
 </section>
 
 <footer class="foot">
-  <div>Built by Mahak Choradia · YONO Nexus</div>
+  <div>Built by Mahak Choradia</div>
   <div class="foot-note">One idea, built properly: notice the payment that's about to bounce,
     fix the account by voice in the person's language, and let the money arrive — the one
     thing SBI can do that no one else can.</div>

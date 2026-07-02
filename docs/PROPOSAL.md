@@ -1,4 +1,4 @@
-# YONO Nexus — The DBT Gap Agent
+# Arrives — The DBT Gap Agent
 ### Getting citizens the government money they're already owed
 **SBI Hackathon Proposal · Mahak Choradia**
 
@@ -72,7 +72,7 @@ just an aggregate statistic:
 
 **1. DETECT** — Scan DBT-eligible accounts in a district ahead of the next
 disbursement cycle. Flag every account where the credit is **at risk**: dormant,
-Aadhaar-unseeded, or KYC-lapsed. Output: *"In Bhagalpur, ~32,000 of 142,000 eligible
+Aadhaar-unseeded, or KYC-lapsed. Output: *"In this district, ~32,000 of 142,000 eligible
 accounts are at risk this cycle — approximately ₹20 Cr will bounce or go
 unclaimed."*
 
@@ -99,12 +99,21 @@ realised rescue rate once an intervention has run — and it explicitly flags wh
 of these numbers is misleading on its own (raw accuracy looks good mostly because
 most accounts *don't* fail — that number alone proves nothing).
 
-**The economics, in one district:** intervening on Bhagalpur's at-risk accounts
-costs roughly ₹7–8 lakh in outreach and camp deployment and rescues an estimated
-₹10 crore in entitlements — a **~130× return**, with zero cross-sell revenue
-involved. Extrapolated (clearly labelled as an estimate, not a measured figure)
-across SBI's ~200 lead-bank districts, the unclaimed/bounced pool this represents
-runs into thousands of crore per cycle.
+**The guardrails, stated up front:** the conversation re-skins RBI's mandatory
+verification steps — it does not remove them. The agent's action space is tiny and
+closed: it can verify identity and reactivate an account; it **never moves money**
+(the credit arrives from the government through the existing rails). Every
+consequential decision runs through deterministic code, not the model's judgment,
+and anything ambiguous defaults to a human. The worst case of an AI mistake is a
+payment that stays exactly as blocked as it already was.
+
+**The economics, in one district:** a voice conversation costs a few rupees; the
+payment it unblocks is worth hundreds to thousands. Intervening on a district's
+at-risk accounts costs roughly ₹7–8 lakh in outreach and camp deployment and
+rescues an estimated ₹10 crore in entitlements — a **~130× return**, with zero
+cross-sell revenue involved. Extrapolated (clearly labelled as an estimate, not a
+measured figure) across SBI's ~200 lead-bank districts, the unclaimed/bounced pool
+this represents runs into thousands of crore per cycle.
 
 ---
 
@@ -132,7 +141,7 @@ between the demo and the pilot; only the data source does.
 
 ## 5. The Ask
 
-A 90-day pilot in a single SLBC lead-bank district (Bhagalpur or comparable), with
+A 90-day pilot in a single SLBC lead-bank district, with
 read access to the DBT/APBS rejection feed and account KYC-status data for that
 district's Jan Dhan and DBT-eligible accounts. Success is measured honestly: the
 calibration of the risk model against what actually bounces, and the realised
@@ -144,10 +153,8 @@ districts is the ROI number above, validated rather than estimated.
 
 ---
 
-*This proposal is the lead idea inside a broader build, YONO Nexus, which also
-includes a voice-led KYC onboarding agent, a transparent Money Health Score, a
-proactive engagement agent, and a financial-literacy academy — built to prove the
-same agentic approach also works at the individual-customer level. Those are
-available to review but are intentionally secondary to this proposal: the DBT Gap
-Agent is the one idea worth SBI's full attention, because it is the one idea SBI's
-competitors cannot copy.*
+*This grew out of a broader agentic-banking build — voice-led KYC onboarding, a
+transparent financial-health score, proactive engagement — which proved the machinery
+works at the individual-customer level. Everything that wasn't this one idea was then
+deliberately cut: the DBT rescue is the one idea worth SBI's full attention, because
+it is the one idea SBI's competitors cannot copy.*

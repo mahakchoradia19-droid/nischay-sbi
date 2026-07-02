@@ -88,7 +88,9 @@ Anyone can have the idea. These are the details that separate a proposal from a
 product, and each one is built into the demo:
 
 **1. One thing is genuinely real, not simulated.**
-The voice agent uses your browser's real speech engine to *speak and listen*, and the
+The voice agent **speaks** with your browser's speech engine and **listens** with its
+speech-recognition engine — say "haan / yes" or "nahi / no" and it responds (with tap
+buttons as a fallback where a browser or microphone isn't available). And the
 name-reconciliation and the reactivation decision are **real code running on the
 server** — you can see the actual match score in the live trace. The reconciler
 generalises to any pair of names, so it works on yours, not just Ramesh's. One
@@ -107,11 +109,12 @@ purpose. Volunteering the boundary of your own system is the strongest signal of
 maturity there is, and almost no one does it.
 
 **4. It scores itself honestly, including the unflattering numbers.**
-The "at-risk" prediction is evaluated on a labelled backtest and reports a calibration
-curve, a Brier score, and precision on the riskiest cases — and it explicitly points
-out that *raw accuracy is misleading* (it looks high only because most accounts don't
-bounce). Reporting the number that makes you look worse is how you earn the one that
-makes you look good.
+The "at-risk" prediction is evaluated on a **simulated cycle** — synthetic outcomes,
+labelled as such, not a real backtest — and reports a calibration curve, a Brier score,
+and precision on the riskiest cases, while explicitly pointing out that *raw accuracy is
+misleading* (it looks high only because most accounts don't bounce). The same evaluation
+code accepts real outcome labels in production; only the data source changes. Reporting
+the number that makes you look worse is how you earn the one that makes you look good.
 
 **5. It answers the hard questions before they're asked.**
 *Why hasn't SBI already done this? Is it even allowed? Why is this AI and not a
@@ -164,20 +167,22 @@ just the same. The point of the gate is that it doesn't trust the talker.
 
 ```
 Arrives/
-├── app.py          the server (Python standard library, ~90 lines)
-├── engine.py       the real logic: name reconciliation, the reactivation gate,
-│                   the cohort maths, and the honest-metrics backtest
-├── web/            the single-page experience
-│   ├── index.html  the narrative + the interactive rescue
-│   ├── style.css   the design system (warm, editorial, calm)
-│   └── app.js      the rescue state machine + the voice engine + the live trace
+├── app.py           the server (Python standard library, ~90 lines)
+├── engine.py        the real logic: name reconciliation, the reactivation gate,
+│                    the district queue, the cohort maths, the self-evaluation
+├── test_engine.py   plain-asserts tests for the real logic (python3 test_engine.py)
+├── web/             the single-page experience
+│   ├── index.html   the narrative + the district queue + the interactive rescue
+│   ├── style.css    the design system (warm, editorial, calm)
+│   └── app.js       the rescue state machine, the voice engine (speak + listen),
+│                    the queue, and the live trace
 │
 └── docs/
-    └── PROPOSAL.md the written proposal (plain-language, for non-technical readers)
+    └── PROPOSAL.md  the written proposal (plain-language, for non-technical readers)
 ```
 
-That's the whole thing. No framework, no build step, no hidden services — six files
-you can read end to end in twenty minutes.
+That's the whole thing. No framework, no build step, no hidden services — a handful of
+files you can read end to end in twenty minutes. Run the tests with `python3 test_engine.py`.
 
 **Two things are real, on purpose**, because they are the claims the whole proposal
 rests on: the **name reconciler** in `engine.py` (`fuzzy_name_match`) that self-heals a
@@ -199,3 +204,37 @@ only SBI is positioned to solve, and I cut everything that wasn't that. Rather t
 pretend it was all one grand design, here's the true version: I built the machinery,
 found the idea it was really for, and made the repository only that. Focus was the
 hardest and most important decision in the whole project.
+
+---
+
+## Sources, and what is / isn't claimed
+
+The mechanism is real and publicly documented; the specific account-level numbers in
+the demo are illustrative, because I don't have SBI's data. To keep the two clearly
+separated:
+
+**Real, and citable by name (the how):**
+- **Aadhaar Payment Bridge System (APBS)** and the **NPCI Aadhaar Mapper** — the rails
+  that route DBT credits by Aadhaar; a credit fails when the account isn't seeded in the
+  mapper. (NPCI documentation.)
+- **PFMS** (Public Financial Management System) — the government system a failed DBT
+  credit returns to. (pfms.nic.in.)
+- **PMJDY / Jan Dhan** — publicly reported at roughly 53–55 crore accounts, the bulk in
+  rural and semi-urban India. (pmjdy.gov.in dashboard.)
+- **Lead Bank Scheme / SLBC** — the RBI framework under which a bank is responsible for
+  financial-inclusion coordination in its lead districts. (RBI.)
+- **DBT scheme figures** — scheme-wise disbursement is published on the DBT Bharat
+  portal. (dbtbharat.gov.in.)
+
+**Illustrative, and labelled as such (the how-much):**
+- The people (Ramesh, and the queue) are synthetic.
+- The district cohort figures are computed from modelled blocker rates, not measured.
+- The self-evaluation runs on a **simulated cycle with synthetic outcomes** — the
+  method is real (calibration, Brier, precision on the riskiest cases); the labels are
+  generated, not observed. The same code accepts real outcome labels in a pilot.
+
+The honest one-line version: **the logic and the voice are real; the data is not, and
+the code says so out loud wherever it matters.**
+
+The next step is replacing "illustrative" with "observed": a micro-survey and a real-user
+demo video, planned in [`docs/FIELD_KIT.md`](docs/FIELD_KIT.md).

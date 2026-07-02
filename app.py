@@ -43,6 +43,9 @@ class Handler(BaseHTTPRequestHandler):
         body = self._read()
         p = self.path
 
+        if p == "/api/queue":
+            return self._json(200, {"queue": engine.queue()})
+
         if p == "/api/person":
             d = engine.diagnose_person(body.get("id", "ramesh"))
             return self._json(200, d or {"error": "unknown person"})

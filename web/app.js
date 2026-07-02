@@ -34,6 +34,31 @@ function speak(text, cb) {
 }
 function orb(on) { $("orb").classList.toggle("active", on); }
 
+// ── real speech recognition (STT) — the agent genuinely listens ────
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+const sttSupported = !!SR;
+let recog = null;
+function listen(onHeard) {
+  if (!sttSupported) return false;          // caller falls back to buttons
+  try { recog && recog.abort(); } catch (_) {}
+  recog = new SR();
+  recog.lang = uiLang;
+  recog.interimResults = false;
+  recog.maxAlternatives = 1;
+  orb(true);
+  recog.onresult = (e) => {
+    const said = (e.results[0][0].transcript || "").toLowerCase();
+    orb(false);
+    onHeard(said);
+  };
+  recog.onerror = () => { orb(false); onHeard(null); };
+  recog.onend = () => orb(false);
+  try { recog.start(); return true; } catch (_) { orb(false); return false; }
+}
+// map a spoken reply to yes / no in Hindi + English
+function heardYes(t) { return /(yes|yeah|same|correct|right|haan|haa|ha |ji|sahi|ek hi|एक ही|हाँ|हां|जी|सही)/i.test(t); }
+function heardNo(t)  { return /(no|not|nope|nahin|nahi|alag|galat|नहीं|नही|अलग)/i.test(t); }
+
 // ── bilingual script ──────────────────────────────────────────────
 const T = {
   greet: {
@@ -130,12 +155,27 @@ window._tapLink = async function () {
     // real name reconciliation call
     const v = await api("/api/verify", { id: "ramesh" });
     trace(`Read the document, compared it to the account name — real match score <code>${v.score}</code> → <b>${v.outcome}</b> (a benign variant, not a dead-end)`);
-    scrTalk(L("confirm"), `
+    const micHint = sttSupported
+      ? `<div class="mic-hint" id="micHint">🎤 ${uiCode === "hi" ? "बोलिए — या नीचे टैप कीजिए" : "Speak your answer — or tap below"}</div>`
+      : "";
+    scrTalk(L("confirm"), `${micHint}
       <div class="confirm-row">
         <button class="mini-btn" onclick="window._confirmYes()">✓ ${uiCode === "hi" ? "हाँ, एक ही" : "Yes, same person"}</button>
         <button class="mini-btn plain" onclick="window._confirmNo()">${uiCode === "hi" ? "नहीं" : "No"}</button>
       </div>`);
-    speak(L("confirm"));
+    speak(L("confirm"), () => {
+      // after the agent finishes speaking, it actually LISTENS (real STT).
+      const started = listen((said) => {
+        if (said == null) return;                 // couldn't hear → buttons remain
+        const mh = $("micHint");
+        if (mh) mh.textContent = "🗣️ " + said;
+        trace(`Heard the reply by voice: “${said}” → interpreted as <b>${heardYes(said) ? "yes" : heardNo(said) ? "no" : "unclear"}</b>`);
+        if (heardYes(said)) window._confirmYes();
+        else if (heardNo(said)) window._confirmNo();
+        // unclear → leave the buttons for the person to tap
+      });
+      if (started && $("micHint")) $("micHint").classList.add("listening");
+    });
   });
 };
 
@@ -235,7 +275,33 @@ $("voiceToggle").onclick = () => {
 };
 $("lang").onchange = e => { uiLang = e.target.value; uiCode = e.target.selectedOptions[0].dataset.code; };
 
+// ── the district queue (the operational view) ─────────────────────
+async function renderQueue() {
+  const d = await api("/api/queue", {});
+  const rupee = (x) => "₹" + x.toLocaleString("en-IN");
+  $("queue").innerHTML = (d.queue || []).map(q => `
+    <div class="q-row route-${q.route}">
+      <div class="q-main">
+        <div class="q-name">${q.name}</div>
+        <div class="q-blocker">${q.blocker_text}</div>
+      </div>
+      <div class="q-amt">${rupee(q.amount)}<span>${q.scheme}</span></div>
+      <div class="q-route">
+        <span class="q-tag">${q.route_label}</span>
+        <span class="q-note">${q.route_note}</span>
+      </div>
+      <div class="q-action">${q.route === "voice"
+        ? `<button class="q-go" onclick="window._rescueFrom()">▶ Rescue</button>`
+        : `<span class="q-hand">→ ${q.route === "camp" ? "camp list" : "human review"}</span>`}</div>
+    </div>`).join("");
+}
+window._rescueFrom = function () {
+  document.getElementById("rescue").scrollIntoView({ behavior: "smooth" });
+  if ($("startBtn") && !$("startBtn").hidden) setTimeout(startRescue, 500);
+};
+
 // ── init ──────────────────────────────────────────────────────────
 renderSteps(-1);
+renderQueue();
 renderLimits();
 renderScale();
