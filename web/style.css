@@ -48,6 +48,12 @@ b{ color:var(--ink); font-weight:650; }
 .nav-links{ display:flex; gap:26px; }
 .nav-links a{ color:var(--ink-3); text-decoration:none; font-size:14px; font-weight:500; transition:color .15s; }
 .nav-links a:hover{ color:var(--clay); }
+.nav-links a.nav-film{ color:var(--clay-deep); font-weight:650; }
+
+/* scroll-reveal: sections breathe in as you reach them */
+.reveal{ opacity:0; transform:translateY(22px); transition:opacity .7s ease, transform .7s ease; }
+.reveal.in{ opacity:1; transform:none; }
+@media (prefers-reduced-motion: reduce){ .reveal{ opacity:1; transform:none; transition:none; } }
 @media(max-width:720px){ .nav-links{ display:none; } .nav{ padding:14px 22px; } }
 
 /* ── hero ────────────────────────────────────────────── */

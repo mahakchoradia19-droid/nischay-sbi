@@ -300,6 +300,16 @@ window._rescueFrom = function () {
   if ($("startBtn") && !$("startBtn").hidden) setTimeout(startRescue, 500);
 };
 
+// ── scroll-reveal (sections breathe in; respects reduced-motion) ──
+(function () {
+  const sections = document.querySelectorAll(".band, .rescue, footer.foot");
+  sections.forEach(s => s.classList.add("reveal"));
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); } });
+  }, { threshold: 0.08 });
+  sections.forEach(s => io.observe(s));
+})();
+
 // ── init ──────────────────────────────────────────────────────────
 renderSteps(-1);
 renderQueue();
