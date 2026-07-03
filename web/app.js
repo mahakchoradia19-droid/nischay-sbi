@@ -12,6 +12,7 @@ const api = (path, body) => fetch(path, {
 let voiceOn = true;
 let uiLang = "hi-IN", uiCode = "hi";
 let person = null;
+let requestId = null;   // fresh per rescue run — double-submits can't double-release
 
 // ── real speech (TTS) ─────────────────────────────────────────────
 const synth = window.speechSynthesis;
@@ -55,9 +56,15 @@ function listen(onHeard) {
   recog.onend = () => orb(false);
   try { recog.start(); return true; } catch (_) { orb(false); return false; }
 }
-// map a spoken reply to yes / no in Hindi + English
-function heardYes(t) { return /(yes|yeah|same|correct|right|haan|haa|ha |ji|sahi|ek hi|एक ही|हाँ|हां|जी|सही)/i.test(t); }
-function heardNo(t)  { return /(no|not|nope|nahin|nahi|alag|galat|नहीं|नही|अलग)/i.test(t); }
+// Map a spoken reply to yes / no in Hindi + English. The NEGATIVE is checked
+// first and bare "ji" is not a yes-marker — otherwise the polite refusal
+// "nahi ji / नहीं जी" would register as consent. In this system a mis-heard
+// "no" must never become a "yes"; anything ambiguous falls back to the buttons.
+function heardNo(t)  { return /(\bno\b|\bnot\b|nope|nahin|nahi|alag|galat|नहीं|नही|अलग|गलत)/i.test(t); }
+function heardYes(t) {
+  if (heardNo(t)) return false;
+  return /(\byes\b|yeah|\bsame\b|correct|right|haan|\bhaa\b|\bha\b|sahi|ek hi|एक ही|हाँ|हां|सही|जी हाँ|ji haan)/i.test(t);
+}
 
 // ── bilingual script ──────────────────────────────────────────────
 const T = {
@@ -135,6 +142,7 @@ function trace(text, ok) {
 async function startRescue() {
   $("startBtn").hidden = true; $("resetBtn").hidden = false;
   $("trace").innerHTML = "";
+  requestId = "req-" + Math.random().toString(36).slice(2, 10);
   person = await api("/api/person", { id: "ramesh" });
 
   // 1 · DETECT
@@ -180,13 +188,21 @@ window._tapLink = async function () {
 };
 
 window._confirmYes = async function () {
-  const r = await api("/api/reactivate", { id: "ramesh", confirmed_name: "Ramesh Kumar Verma", reconciled: true });
-  trace(`Compliance screen: clear · reactivation gate: identity reconciled ✓`, true);
+  const r = await api("/api/reactivate", { id: "ramesh", confirmed_name: "Ramesh Kumar Verma",
+                                           reconciled: true, request_id: requestId });
+  trace(`Compliance screen: clear · reactivation gate: identity reconciled ✓ · idempotency key <code>${requestId}</code>`, true);
   trace(`Account <b>${r.account_state}</b> → <b>${r.scheme} ₹${r.amount_released.toLocaleString("en-IN")}</b> released and credited`, true);
   // 4 · ARRIVE
   renderSteps(4);
   scrLanded(person);
   speak(L("done"));
+  // show the server's own append-only audit trail — "every step logged", visibly
+  const a = await api("/api/audit", {});
+  const mine = (a.audit || []).slice(-4);
+  if (mine.length) {
+    trace(`<b>Server audit trail</b> (append-only): ` + mine.map(e =>
+      `<code>#${e.seq} ${e.event}${e.outcome ? ":" + e.outcome : e.status ? ":" + e.status : ""}</code>`).join(" "), true);
+  }
 };
 
 window._confirmNo = function () {
@@ -229,8 +245,10 @@ async function renderScale() {
   $("scaleGrid").innerHTML = [
     [c.at_risk_accounts.toLocaleString("en-IN"), "payments at risk this cycle, in one district", "clay"],
     [cr(c.at_risk_amount_inr), "of citizens' money at stake", "clay"],
-    [c.digitally_fixable_pct + "%", "fixable by voice, at almost no cost", "sage"],
-    [c.needs_human_pct + "%", "honestly routed to a human / camp", ""],
+    [c.digitally_fixable_pct + "%", "fixable by voice — reachable, dormant/KYC only", "sage"],
+    [c.needs_human_pct + "%", "honestly routed to a human / camp (unseeded or no phone)", ""],
+    ["₹" + (c.intervention_cost_inr / 1e5).toFixed(1) + " L", "cost to intervene on all of them", ""],
+    [c.roi_x + "×", "return — " + cr(c.rescued_amount_inr) + " rescued, computed not quoted", "sage"],
   ].map(([v, l, cl]) => `<div class="scale-cell"><div class="scale-val ${cl}">${v}</div><div class="scale-lbl">${l}</div></div>`).join("");
 
   $("metricsNote").textContent = m.note;

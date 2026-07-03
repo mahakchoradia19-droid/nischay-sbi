@@ -1,6 +1,7 @@
 # Arrives - the bank that makes sure the money arrives
 
 **An SBI Hackathon project · Mahak Choradia**
+![tests](https://github.com/mahakchoradia19-droid/arrives-sbi/actions/workflows/tests.yml/badge.svg) · MIT licensed
 
 There is a quiet, expensive problem hiding inside India's welfare system, and it has
 nothing to do with corruption or leakage. It's this: the government sends money to
@@ -134,8 +135,9 @@ Requirements: **Python 3.9+. Nothing else** - no pip, no npm, no build step. Bes
 Chrome, because the voice agent uses the browser's Web Speech API.
 
 ```bash
-python3 app.py        # → http://localhost:8000
-python3 test_engine.py   # 22 checks over the real logic
+python3 app.py           # → http://localhost:8000
+python3 test_engine.py   # 31 checks over the real logic
+python3 test_server.py   # 15 checks: the security attack pass, codified
 ```
 
 Then: scroll to **The rescue**, press **Start**, and let Ramesh's account get fixed.
@@ -162,23 +164,26 @@ just the same. The point of the gate is that it doesn't trust the talker.
 Arrives/
 ├── app.py           the hardened server (stdlib only): rate-limited, size-capped,
 │                    security headers, localhost-bound by default
-├── engine.py        the real logic: name reconciliation, the reactivation gate,
-│                    the district queue, the cohort maths, the self-evaluation
-├── test_engine.py   plain-asserts tests for the real logic (python3 test_engine.py)
+├── engine.py        the real logic: name reconciliation (honorific/abbreviation-aware),
+│                    the reactivation gate (idempotent, audit-logged), the district
+│                    queue, the cohort economics, the self-evaluation
+├── test_engine.py   31 checks over the real logic
+├── test_server.py   15 checks: the security attack pass, codified
 ├── web/
 │   ├── index.html   the narrative + the district queue + the interactive rescue
 │   ├── film.html    the 80-second self-playing film (the product narrates itself)
 │   ├── style.css    the design system (warm, editorial, calm)
 │   └── app.js       the rescue state machine, the voice engine (speak + listen),
 │                    the queue, and the live trace
-│
-└── docs/
-    ├── PROPOSAL.md  the written proposal (plain-language, for non-technical readers)
-    └── FIELD_KIT.md the survey + real-user demo script for primary evidence
+├── docs/
+│   ├── PROPOSAL.md  the written proposal (plain-language, for non-technical readers)
+│   └── FIELD_KIT.md the survey + real-user demo script for primary evidence
+├── .github/         CI: both test suites run on every push
+└── LICENSE          MIT
 ```
 
 That's the whole thing. No framework, no build step, no hidden services - a handful of
-files you can read end to end in twenty minutes. Run the tests with `python3 test_engine.py`.
+files you can read end to end in twenty minutes, with 46 checks a CI badge attests to.
 
 **Two things are real, on purpose**, because they are the claims the whole proposal
 rests on: the **name reconciler** in `engine.py` (`fuzzy_name_match`) that self-heals a

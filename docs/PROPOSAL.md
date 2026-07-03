@@ -105,12 +105,16 @@ rupees. It is seed for a sowing season, a school fee paid on time, a loan not ta
 from a moneylender. Multiply by every cycle, every scheme, every year of a life.
 
 **To SBI:** a voice conversation costs a few rupees; the payment it unblocks is worth
-hundreds to thousands. In a single district, roughly ₹7–8 lakh of outreach rescues an
-estimated ₹10 crore of entitlements - **on the order of a hundred times return**,
-with zero cross-sell. Every rescued account also stops being a dead entry and becomes
-a living customer: active, transacting, reachable. And the institutional prize sits
-above all of it - being *visibly* the bank that delivers the nation's money is worth
-more than any product line, because it is the reason SBI holds its mandate at all.
+hundreds to thousands. In our modelled district, about ₹8 lakh of outreach rescues an
+estimated ₹3.8 crore of entitlements - **roughly a 47× return** - with zero
+cross-sell, using deliberately conservative assumptions (55% rescue when a
+conversation happens, 38% via camps, and the no-phone segment honestly priced at
+human-visit cost). These aren't slide numbers: they fall out of the same code that
+runs the demo, so a reviewer can re-derive them. Every rescued account also stops
+being a dead entry and becomes a living customer: active, transacting, reachable. And
+the institutional prize sits above all of it - being *visibly* the bank that delivers
+the nation's money is worth more than any product line, because it is the reason SBI
+holds its mandate at all.
 
 **To the country:** extrapolated across SBI's lead-bank footprint, the pool of
 bounced and unclaimed benefit money plausibly runs to thousands of crore per cycle.

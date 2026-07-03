@@ -22,9 +22,32 @@ Stdlib only.
 """
 
 import difflib
+import itertools
 import random
 import re
+import time
 import zlib
+
+# ---------------------------------------------------------------------------
+# Audit trail — append-only, in-memory for the demo (a WORM store in production).
+# The page claims "every step logged"; this is what makes that claim true.
+# ---------------------------------------------------------------------------
+AUDIT = []
+_audit_seq = itertools.count(1)
+
+
+def _audit(event, **fields):
+    entry = {"seq": next(_audit_seq), "t": round(time.time(), 3),
+             "event": event, **fields}
+    AUDIT.append(entry)
+    if len(AUDIT) > 500:            # bounded for a long-running demo
+        del AUDIT[:100]
+    return entry
+
+
+def audit_log(last=50):
+    """The most recent audit entries, oldest first."""
+    return AUDIT[-last:]
 
 # ---------------------------------------------------------------------------
 # The one human being the whole demo is built around, plus the boundary cases
@@ -124,8 +147,23 @@ def diagnose_person(pid):
 _SANCTIONS = ["Dawood Ibrahim", "Hafiz Saeed", "Iqbal Mirchi", "Tiger Memon"]
 
 
+# Indian-document reality: honorifics appear on documents but not accounts (and
+# vice versa), and a handful of abbreviations are near-universal. Normalising
+# these is what makes the matcher survive real Aadhaar/PAN pairs, not just demos.
+_HONORIFICS = {"shri", "sri", "sh", "smt", "shrimati", "srimati", "kumari",
+               "mr", "mrs", "ms", "dr", "prof"}
+_ABBREV = {"md": "mohammed", "mohd": "mohammed", "mohammad": "mohammed",
+           "muhammad": "mohammed", "kr": "kumar", "pd": "prasad"}
+
+
 def _tokens(name):
-    return [t for t in re.sub(r"[^a-z ]", " ", (name or "").lower()).split() if t]
+    raw = re.sub(r"[^a-z ]", " ", (name or "").lower()).split()
+    out = []
+    for t in raw:
+        if t in _HONORIFICS:
+            continue
+        out.append(_ABBREV.get(t, t))
+    return out
 
 
 def fuzzy_name_match(a, b):
@@ -187,33 +225,51 @@ def verify_identity(pid, document_name=None):
         outcome = "variant"        # benign — confirm with one targeted question
     else:
         outcome = "conflict"       # genuine mismatch — escalate to a human
+    _audit("identity_check", person=pid, score=score, outcome=outcome)
     return {"ok": True, "account_name": account_name, "document_name": doc_name,
             "score": score, "outcome": outcome}
 
 
-def reactivate(pid, confirmed_name, identity_reconciled):
+_LEDGER = {}   # (pid, request_id) → result: same request can never release twice
+
+
+def reactivate(pid, confirmed_name, identity_reconciled, request_id=None):
     """
     DETERMINISTIC gate. The account is reactivated (and the pending payment released)
     only when identity is reconciled AND screening is clear. An LLM driving the
     conversation cannot bypass this.
+
+    Idempotent per request_id: a double-submitted request (network retry, double
+    tap) returns the SAME result and never releases the payment twice.
     """
     p = PEOPLE.get(pid)
     if not p:
         return {"ok": False, "error": "unknown person"}
+    key = (pid, request_id)
+    if request_id and key in _LEDGER:
+        _audit("reactivate_replay", person=pid, request_id=request_id)
+        return {**_LEDGER[key], "idempotent_replay": True}
     scr = screen_name(confirmed_name or p["name"])
+    _audit("screening", person=pid, clear=scr["clear"], score=scr["score"])
     if not scr["clear"]:
-        return {"ok": False, "status": "BLOCKED", "reason": "screening_hit",
-                "message": "Screening flag — routed to compliance, not reactivated."}
-    if not identity_reconciled:
-        return {"ok": False, "status": "BLOCKED", "reason": "identity_unresolved",
-                "message": "Identity not reconciled — cannot reactivate."}
-    if not p["aadhaar_seeded"]:
-        return {"ok": False, "status": "NEEDS_CAMP", "reason": "aadhaar_unseeded",
-                "message": "Aadhaar not linked in the payments system — needs a physical camp visit."}
-    return {"ok": True, "status": "ACTIVE",
-            "account_state": "reactivated",
-            "amount_released": p["amount"], "scheme": p["scheme"],
-            "message": f"Account active. {p['scheme']} ₹{p['amount']:,} released and credited."}
+        result = {"ok": False, "status": "BLOCKED", "reason": "screening_hit",
+                  "message": "Screening flag — routed to compliance, not reactivated."}
+    elif not identity_reconciled:
+        result = {"ok": False, "status": "BLOCKED", "reason": "identity_unresolved",
+                  "message": "Identity not reconciled — cannot reactivate."}
+    elif not p["aadhaar_seeded"]:
+        result = {"ok": False, "status": "NEEDS_CAMP", "reason": "aadhaar_unseeded",
+                  "message": "Aadhaar not linked in the payments system — needs a physical camp visit."}
+    else:
+        result = {"ok": True, "status": "ACTIVE",
+                  "account_state": "reactivated",
+                  "amount_released": p["amount"], "scheme": p["scheme"],
+                  "message": f"Account active. {p['scheme']} ₹{p['amount']:,} released and credited."}
+    _audit("gate_decision", person=pid, status=result["status"],
+           reason=result.get("reason"), request_id=request_id)
+    if request_id and result["ok"]:
+        _LEDGER[key] = result
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -227,24 +283,30 @@ def cohort_stats(eligible=142000, seed_key="cohort"):
     rng = random.Random(zlib.crc32(seed_key.encode()) % 100000)
     sample = min(eligible, 6000)
     scale = eligible / sample
-    dormant = unseeded = kyc = at_risk = 0
+    at_risk = 0
+    human = 0        # unseeded Aadhaar OR no phone: can't be fixed digitally
     for _ in range(sample):
-        d = rng.random() < 0.11
-        u = rng.random() < 0.07
-        k = rng.random() < 0.06
-        nophone = rng.random() < 0.20
+        d = rng.random() < 0.11          # dormant
+        u = rng.random() < 0.07          # Aadhaar unseeded
+        k = rng.random() < 0.06          # KYC lapsed
+        nophone = rng.random() < 0.20    # unreachable by phone
         if d or u or k:
             at_risk += 1
-            if d: dormant += 1
-            if u: unseeded += 1
-            if k: kyc += 1
+            if u or nophone:
+                human += 1
     at_risk_scaled = round(at_risk * scale)
     # amount at risk (PM-KISAN-weighted average per account for illustration)
     avg_amount = 2600
     at_risk_amount = at_risk_scaled * avg_amount
-    # boundary split: digitally fixable (dormant/KYC only) vs needs-human (unseeded)
-    needs_human = round(unseeded * scale)
+    needs_human = round(human * scale)
     digitally_fixable = at_risk_scaled - needs_human
+    # the economics, computed rather than quoted:
+    #   voice track ≈ ₹8/account (SMS + IVR callback + inference)
+    #   human track ≈ ₹48/account (camp / BC-agent visit share)
+    #   conservative rescue rates: 55% when a conversation happens, 38% via camp
+    cost = digitally_fixable * 8 + needs_human * 48
+    rescued_amount = round((digitally_fixable * 0.55 + needs_human * 0.38) * avg_amount)
+    roi = round(rescued_amount / cost, 1) if cost else 0.0
     return {
         "eligible": eligible,
         "at_risk_accounts": at_risk_scaled,
@@ -254,6 +316,9 @@ def cohort_stats(eligible=142000, seed_key="cohort"):
         "digitally_fixable_pct": round(digitally_fixable / at_risk_scaled * 100),
         "needs_human": needs_human,
         "needs_human_pct": round(needs_human / at_risk_scaled * 100),
+        "intervention_cost_inr": cost,
+        "rescued_amount_inr": rescued_amount,
+        "roi_x": roi,
     }
 
 

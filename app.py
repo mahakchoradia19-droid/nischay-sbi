@@ -124,8 +124,12 @@ class Handler(BaseHTTPRequestHandler):
         if p == "/api/reactivate":
             r = engine.reactivate(_s(body.get("id"), "ramesh"),
                                   _s(body.get("confirmed_name")),
-                                  bool(body.get("reconciled")))
+                                  bool(body.get("reconciled")),
+                                  request_id=_s(body.get("request_id"), maxlen=64))
             return self._json(200, r)
+
+        if p == "/api/audit":
+            return self._json(200, {"audit": engine.audit_log()})
 
         if p == "/api/cohort":
             return self._json(200, {
