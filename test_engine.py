@@ -60,6 +60,26 @@ check("same request_id replays, doesn't re-process",
 check("replay returns the identical decision",
       r2["status"] == r1["status"] and r2["amount_released"] == r1["amount_released"])
 
+# ── journey memory (a dropped call never loses progress) ────────────
+e.journey_reset("ramesh")
+check("fresh journey is empty and not resumable",
+      e.journey_get("ramesh")["stage"] is None)
+e.verify_identity("ramesh")                      # the step before the drop
+j = e.journey_get("ramesh")
+check("identity check saves the journey stage server-side",
+      j["stage"] == "identity_confirm" and j["resumable"] is True)
+check("resume prompt exists in both languages",
+      "resume_hi" in j and "resume_en" in j)
+check("saved context carries the match score", "score" in j["context"])
+e.reactivate("ramesh", "Ramesh Kumar Verma", True)
+j2 = e.journey_get("ramesh")
+check("successful gate advances the journey to arrived",
+      j2["stage"] == "arrived" and j2["resumable"] is False)
+check("journeys never move backwards",
+      e.journey_advance("ramesh", "engaged")["stage"] == "arrived")
+e.journey_reset("ramesh")
+check("reset clears the journey", e.journey_get("ramesh")["stage"] is None)
+
 # ── audit trail ("every step logged" is a code fact, not a slogan) ──
 log = e.audit_log()
 events = [x["event"] for x in log]

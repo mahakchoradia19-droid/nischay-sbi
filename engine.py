@@ -226,8 +226,58 @@ def verify_identity(pid, document_name=None):
     else:
         outcome = "conflict"       # genuine mismatch — escalate to a human
     _audit("identity_check", person=pid, score=score, outcome=outcome)
+    # journey memory: the person is now one answer away from reactivation
+    journey_advance(pid, "identity_confirm", score=score, outcome=outcome)
     return {"ok": True, "account_name": account_name, "document_name": doc_name,
             "score": score, "outcome": outcome}
+
+
+# ---------------------------------------------------------------------------
+# Journey memory — the agentic loop that survives a dropped call.
+# In rural India the interrupted session is the NORMAL case, not the edge case:
+# calls drop, phones die, someone walks into the shop. The journey store keeps
+# each person's exact position server-side, so the next contact resumes at the
+# step they left — "you were almost done" — instead of starting over.
+# ---------------------------------------------------------------------------
+JOURNEY_STAGES = ["noticed", "engaged", "identity_confirm", "arrived"]
+_JOURNEYS = {}   # pid → {"stage", "context", "updated"}
+
+
+def journey_advance(pid, stage, **context):
+    if stage not in JOURNEY_STAGES:
+        return None
+    cur = _JOURNEYS.get(pid)
+    # never move backwards (a stale client can't rewind a completed journey)
+    if cur and JOURNEY_STAGES.index(stage) < JOURNEY_STAGES.index(cur["stage"]):
+        return cur
+    j = {"stage": stage, "context": {**(cur["context"] if cur else {}), **context},
+         "updated": round(time.time(), 3)}
+    _JOURNEYS[pid] = j
+    _audit("journey", person=pid, stage=stage)
+    return j
+
+
+def journey_get(pid):
+    """Where this person's journey stands, plus the resume prompt if mid-flight."""
+    j = _JOURNEYS.get(pid)
+    if not j:
+        return {"stage": None, "resumable": False}
+    resumable = j["stage"] == "identity_confirm"
+    out = {"stage": j["stage"], "context": j["context"],
+           "updated": j["updated"], "resumable": resumable}
+    if resumable:
+        out["resume_hi"] = ("आपका काम अधूरा रह गया था — बस एक जवाब बाकी है। "
+                            "जहाँ छोड़ा था वहीं से जारी रखें।")
+        out["resume_en"] = ("You were almost done — one answer left. "
+                            "Continue exactly where you left off.")
+    return out
+
+
+def journey_reset(pid):
+    if pid in _JOURNEYS:
+        del _JOURNEYS[pid]
+        _audit("journey_reset", person=pid)
+    return {"stage": None, "resumable": False}
 
 
 _LEDGER = {}   # (pid, request_id) → result: same request can never release twice
@@ -269,6 +319,8 @@ def reactivate(pid, confirmed_name, identity_reconciled, request_id=None):
            reason=result.get("reason"), request_id=request_id)
     if request_id and result["ok"]:
         _LEDGER[key] = result
+    if result["ok"]:
+        journey_advance(pid, "arrived")
     return result
 
 

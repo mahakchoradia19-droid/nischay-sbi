@@ -59,6 +59,11 @@ s, _, j = req("/api/verify", {"id": "ramesh"})
 check("verify API works end to end", s == 200 and j["outcome"] == "variant")
 s, _, j = req("/api/queue", {})
 check("queue API works", s == 200 and len(j["queue"]) == 4)
+req("/api/journey/reset", {"id": "ramesh"})
+req("/api/verify", {"id": "ramesh"})
+s, _, j = req("/api/journey", {"id": "ramesh"})
+check("journey survives across requests (server-side memory)",
+      s == 200 and j["stage"] == "identity_confirm" and j["resumable"] is True)
 
 # ── attacks ─────────────────────────────────────────────────────────
 s, _, _ = req("/../engine.py")

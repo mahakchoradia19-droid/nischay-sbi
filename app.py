@@ -131,6 +131,12 @@ class Handler(BaseHTTPRequestHandler):
         if p == "/api/audit":
             return self._json(200, {"audit": engine.audit_log()})
 
+        if p == "/api/journey":
+            return self._json(200, engine.journey_get(_s(body.get("id"), "ramesh")))
+
+        if p == "/api/journey/reset":
+            return self._json(200, engine.journey_reset(_s(body.get("id"), "ramesh")))
+
         if p == "/api/cohort":
             return self._json(200, {
                 "cohort": engine.cohort_stats(),

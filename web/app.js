@@ -120,6 +120,8 @@ function scrLanded(p) {
       <div class="landed-check">✓</div>
       <div class="landed-amt">₹${p.amount.toLocaleString("en-IN")} arrived</div>
       <div class="landed-msg">${p.scheme} credited. The door was open when the money knocked.</div>
+      <div class="landed-next" lang="hi">अगली किस्त अपने-आप आएगी। कुछ अटकेगा तभी हम फिर कॉल करेंगे — और कुछ नहीं।</div>
+      <div class="landed-next-en">Next instalment lands on its own. We only call again if something breaks — nothing else.</div>
     </div>`);
 }
 
@@ -143,6 +145,7 @@ async function startRescue() {
   $("startBtn").hidden = true; $("resetBtn").hidden = false;
   $("trace").innerHTML = "";
   requestId = "req-" + Math.random().toString(36).slice(2, 10);
+  await api("/api/journey/reset", { id: "ramesh" });   // fresh journey per run
   person = await api("/api/person", { id: "ramesh" });
 
   // 1 · DETECT
@@ -160,32 +163,70 @@ window._tapLink = async function () {
   renderSteps(2);
   scrTalk(L("greet"));
   speak(L("greet"), async () => {
-    // real name reconciliation call
+    // real name reconciliation call (also saves journey stage on the server)
     const v = await api("/api/verify", { id: "ramesh" });
     trace(`Read the document, compared it to the account name — real match score <code>${v.score}</code> → <b>${v.outcome}</b> (a benign variant, not a dead-end)`);
-    const micHint = sttSupported
-      ? `<div class="mic-hint" id="micHint">🎤 ${uiCode === "hi" ? "बोलिए — या नीचे टैप कीजिए" : "Speak your answer — or tap below"}</div>`
-      : "";
-    scrTalk(L("confirm"), `${micHint}
-      <div class="confirm-row">
-        <button class="mini-btn" onclick="window._confirmYes()">✓ ${uiCode === "hi" ? "हाँ, एक ही" : "Yes, same person"}</button>
-        <button class="mini-btn plain" onclick="window._confirmNo()">${uiCode === "hi" ? "नहीं" : "No"}</button>
-      </div>`);
-    speak(L("confirm"), () => {
-      // after the agent finishes speaking, it actually LISTENS (real STT).
-      const started = listen((said) => {
-        if (said == null) return;                 // couldn't hear → buttons remain
-        const mh = $("micHint");
-        if (mh) mh.textContent = "🗣️ " + said;
-        trace(`Heard the reply by voice: “${said}” → interpreted as <b>${heardYes(said) ? "yes" : heardNo(said) ? "no" : "unclear"}</b>`);
-        if (heardYes(said)) window._confirmYes();
-        else if (heardNo(said)) window._confirmNo();
-        // unclear → leave the buttons for the person to tap
-      });
-      if (started && $("micHint")) $("micHint").classList.add("listening");
-    });
+    renderConfirm(L("confirm"));
   });
 };
+
+// The one-question confirmation step — shared by the first pass and the resume.
+function renderConfirm(spokenLine) {
+  const micHint = sttSupported
+    ? `<div class="mic-hint" id="micHint">🎤 ${uiCode === "hi" ? "बोलिए — या नीचे टैप कीजिए" : "Speak your answer — or tap below"}</div>`
+    : "";
+  scrTalk(spokenLine, `${micHint}
+    <div class="confirm-row">
+      <button class="mini-btn" onclick="window._confirmYes()">✓ ${uiCode === "hi" ? "हाँ, एक ही" : "Yes, same person"}</button>
+      <button class="mini-btn plain" onclick="window._confirmNo()">${uiCode === "hi" ? "नहीं" : "No"}</button>
+    </div>
+    <button class="drop-chip" onclick="window._callDrops()">📵 ${uiCode === "hi" ? "सिमुलेट करें: कॉल कट जाती है" : "simulate: the call drops"}</button>`);
+  speak(spokenLine, () => {
+    // after the agent finishes speaking, it actually LISTENS (real STT).
+    const started = listen((said) => {
+      if (said == null) return;                 // couldn't hear → buttons remain
+      const mh = $("micHint");
+      if (mh) mh.textContent = "🗣️ " + said;
+      trace(`Heard the reply by voice: “${said}” → interpreted as <b>${heardYes(said) ? "yes" : heardNo(said) ? "no" : "unclear"}</b>`);
+      if (heardYes(said)) window._confirmYes();
+      else if (heardNo(said)) window._confirmNo();
+      // unclear → leave the buttons for the person to tap
+    });
+    if (started && $("micHint")) $("micHint").classList.add("listening");
+  });
+}
+
+// ── the dropped call: rural reality, answered by journey memory ────
+window._callDrops = function () {
+  stopListening(); if (synth) synth.cancel(); orb(false);
+  trace(`📵 Call dropped mid-confirmation. Nothing is lost — the journey stage is <b>saved on the server</b>, not in this page.`);
+  screen(`
+    <div class="landed">
+      <div class="scr-title" style="color:var(--ink-3)">Call ended · 0:32</div>
+      <div class="scr-sub" style="text-align:center">The shop got busy. The network blinked.<br>In rural India this is the normal case, not the edge case.</div>
+    </div>`);
+  setTimeout(async () => {
+    const j = await api("/api/journey", { id: "ramesh" });
+    const msg = uiCode === "hi" ? (j.resume_hi || "") : (j.resume_en || "");
+    screen(`
+      <div class="scr-title">The system remembers.</div>
+      <div class="scr-sub">A follow-up arrives — pointing at the exact unfinished step</div>
+      <div class="sms"><div class="sms-from">SBI · later that day</div><span lang="hi">${msg}</span></div>
+      <div style="flex:1"></div>
+      <button class="mini-btn" onclick="window._resume()">${uiCode === "hi" ? "वहीं से जारी रखें →" : "Continue where he left off →"}</button>`);
+  }, 1900);
+};
+
+window._resume = async function () {
+  const j = await api("/api/journey", { id: "ramesh" });
+  trace(`Journey restored <b>from the server</b>: stage <code>${j.stage}</code>, saved match score <code>${j.context && j.context.score}</code> — resuming at the exact step, not from the start`, true);
+  const line = uiCode === "hi"
+    ? "वहीं से शुरू करते हैं। बस एक जवाब बाकी है — क्या यह एक ही व्यक्ति हैं?"
+    : "Right where we left off. One answer left — is this the same person?";
+  renderConfirm(line);
+};
+
+function stopListening() { try { recog && recog.abort(); } catch (_) {} }
 
 window._confirmYes = async function () {
   const r = await api("/api/reactivate", { id: "ramesh", confirmed_name: "Ramesh Kumar Verma",
