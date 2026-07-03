@@ -162,6 +162,16 @@ cycle. The only open question is whether it is built by the institution whose
 accounts, rails and mandate it runs on - or assembled awkwardly around that
 institution, years later, by someone else.
 
+And there is a second half to the gap, deliberately out of scope here: the person
+who never *enrolled* for what they are entitled to, because nobody told them. Once
+the delivery loop is proven, the same machinery extends to them - the bank's own KYC
+and account signals are enough to say "likely eligible, worth a ninety-second
+conversation," the missing answers come by voice the same way, and the catalog of
+schemes already exists as government infrastructure (myScheme, DBT Bharat), so SBI
+maintains nothing new. Every enrollment that conversation completes then flows
+through the delivery guarantee this proposal builds. First prove the money arrives.
+Then widen who it arrives for.
+
 Start with one district and one payment cycle. End with a country where "the
 government sent it" and "the family received it" are, finally, the same sentence.
 
