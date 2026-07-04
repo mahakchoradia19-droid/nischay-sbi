@@ -108,6 +108,8 @@ screen. The product is the screen; the proof is the face.
 - [ ] Survey numbers appear in the first page of the proposal
 - [ ] Video plays offline from the local file
 - [ ] Every claim in the doc is cited, computed, or came from your field test
-- [ ] No stale names anywhere (`grep -ri "saarthi\|yono" .`)
-- [ ] `python3 test_engine.py` passes
+- [ ] No stale names anywhere (`grep -ri "saarthi\|yono\|arrives" .`)
+- [ ] `python3 test_engine.py` and `python3 test_server.py` both pass
+- [ ] Tried it on a second machine (or at least a fresh terminal/port) - it should
+      start cleanly with just `python3 app.py`, auto-picking a free port if 8000 is busy
 - [ ] Submit hours early, never at the deadline

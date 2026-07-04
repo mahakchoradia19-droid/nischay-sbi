@@ -1,6 +1,10 @@
 """
-Arrives — server (stdlib only).
-Run:  python3 app.py   →  http://localhost:8000
+Landfall — server (stdlib only).
+Run:  python3 app.py   (or `python app.py` on Windows)   ->  http://localhost:8000
+
+Zero dependencies, zero setup: this is meant to run identically on any machine
+with Python 3.9+ installed — Windows, macOS, Linux, a judge's laptop, a fresh
+VM. No pip install, no venv, no config file to edit.
 
 The API is deliberately thin: the parts that must be REAL — the name
 reconciliation and the reactivation gate — run here, on the server, so the
@@ -14,12 +18,24 @@ Hardened for a demo that handles identity-shaped data:
   - security headers on every response (CSP, nosniff, frame-deny, referrer)
   - path traversal defence via realpath containment
   - no server-version disclosure
+
+Portable by construction:
+  - PORT/HOST are read from the environment, never hardcoded
+  - if the requested port is already taken (very common on a shared laptop —
+    8000 is a popular default for other dev tools), it tries the next few
+    ports automatically instead of crashing, and prints whichever one it
+    actually bound to
+  - all paths are derived from this file's own location (__file__), never
+    from the current working directory, so `python3 app.py` works no matter
+    which folder you launched it from
 """
 
 import json
 import os
+import sys
 import threading
 import time
+import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import engine
@@ -28,6 +44,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 WEB = os.path.realpath(os.path.join(HERE, "web"))
 HOST = os.environ.get("HOST", "127.0.0.1")
 PORT = int(os.environ.get("PORT", "8000"))
+PORT_RETRIES = 9          # if PORT is busy, try this many ports upward
+AUTO_OPEN = os.environ.get("NO_BROWSER", "") == ""
 
 MAX_BODY = 16 * 1024              # 16 KB is generous for these payloads
 RATE_WINDOW = 60                  # seconds
@@ -74,7 +92,7 @@ _limiter = _RateLimiter()
 
 
 class Handler(BaseHTTPRequestHandler):
-    server_version = "Arrives"        # no python/http version disclosure
+    server_version = "Landfall"       # no python/http version disclosure
     sys_version = ""
 
     def log_message(self, *a):
@@ -183,14 +201,49 @@ def _s(v, default=None, maxlen=200):
     return str(v)[:maxlen]
 
 
+def _bind(host, first_port, retries):
+    """Try first_port, then first_port+1, +2, ... so a busy port (very common
+    on a shared laptop — other tools love 8000/8080) never crashes the demo."""
+    last_err = None
+    for offset in range(retries + 1):
+        port = first_port + offset
+        try:
+            return ThreadingHTTPServer((host, port), Handler), port
+        except OSError as e:
+            last_err = e
+            continue
+    raise SystemExit(
+        f"\n  Could not bind any port from {first_port} to {first_port + retries} "
+        f"on {host}.\n  Something else on this machine is very busy. Try:\n"
+        f"    PORT=9000 python3 app.py\n  (Original error: {last_err})\n"
+    )
+
+
 def main():
-    print("\n  Arrives — the bank that makes sure the money arrives")
-    print(f"  Open   http://localhost:{PORT}")
-    print(f"  Film   http://localhost:{PORT}/film.html")
+    httpd, bound_port = _bind(HOST, PORT, PORT_RETRIES)
+    url = f"http://localhost:{bound_port}"
+    py = os.path.basename(sys.executable) or "python3"
+
+    print("\n  Landfall - the bank that makes sure the money lands")
+    print(f"  Open   {url}")
+    print(f"  Film   {url}/film.html")
+    if bound_port != PORT:
+        print(f"  NOTE   port {PORT} was busy, so this is running on {bound_port} instead")
     if HOST != "127.0.0.1":
-        print(f"  NOTE   bound to {HOST} — exposed beyond this machine")
+        print(f"  NOTE   bound to {HOST} - exposed beyond this machine")
+    print(f"  Stop   press Ctrl+C  (relaunch any time with `{py} app.py`)")
     print()
-    ThreadingHTTPServer((HOST, PORT), Handler).serve_forever()
+
+    if AUTO_OPEN:
+        try:
+            webbrowser.open(url)
+        except Exception:
+            pass   # headless environment (CI, a remote box) - just skip it
+
+    try:
+        httpd.serve_forever()
+    except KeyboardInterrupt:
+        print("\n  Stopped.\n")
 
 
 if __name__ == "__main__":

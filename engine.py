@@ -1,5 +1,5 @@
 """
-engine.py — the core of "Arrives": the system that makes sure government money
+engine.py — the core of "Landfall": the system that makes sure government money
 reaches the person it was sent to.
 
 Two things are REAL here, not mocked, because they are the load-bearing claims of

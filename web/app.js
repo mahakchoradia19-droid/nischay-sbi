@@ -1,4 +1,4 @@
-// Arrives — front end.
+// Landfall — front end.
 // The rescue is a small state machine driving a phone mockup. The agent SPEAKS
 // each line with the browser's real speech engine; the name-reconciliation and
 // the reactivation gate are real calls to the server (shown in the trace).
