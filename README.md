@@ -202,17 +202,16 @@ Nischay/
 │                    the queue, and the live trace
 ├── docs/
 │   ├── PROPOSAL.md              the written proposal (plain-language)
+│   ├── SOLUTION_DESIGN.md       the deeper architecture: the readiness engine + cheapest-fix-first
 │   ├── Nischay_SBI_Hackathon.pptx  the submission deck (12 slides)
-│   ├── FIELD_KIT.md             the survey + real-user demo script for primary evidence
-│   └── GAPS.md                  an honest internal list of what's thin or missing
+│   └── FIELD_KIT.md             the survey + real-user demo script for primary evidence
 ├── Dockerfile · render.yaml    one-click deploy of the full app
 ├── .github/workflows/          CI (tests) + Pages (publishes the film)
-├── .github/         CI: both test suites run on every push
-└── LICENSE          MIT
+└── LICENSE                     MIT
 ```
 
 That's the whole thing. No framework, no build step, no hidden services - a handful of
-files you can read end to end in twenty minutes, with 54 checks a CI badge attests to.
+files you can read end to end in twenty minutes, with 66 checks a CI badge attests to.
 
 **Two things are real, on purpose**, because they are the claims the whole proposal
 rests on: the **name reconciler** in `engine.py` (`fuzzy_name_match`) that self-heals a

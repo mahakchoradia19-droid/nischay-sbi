@@ -36,6 +36,13 @@ Notice what's *not* on that list: fraud, error, ineligibility. The person did no
 wrong. The government did nothing wrong. A technicality nobody was watching simply
 closed the door before the money knocked.
 
+This is not marginal. In an independent beneficiary survey, **72.85% of recipients had
+hit a payment-processing problem** (Dvara–Haqdarshak, 2022, N=1,477). In one district's
+PM-KISAN data, **51.3% of failures were an Aadhaar simply not seeded** in the NPCI
+mapper. And of the identity mismatches, **36% were plain spelling errors in the name** —
+the exact case our name-reconciliation self-heal resolves with no human contact at all.
+The data doesn't just confirm the problem; it confirms the fix.
+
 And here is the detail that turns this from sad to solvable: **the bank's own systems
 can see every one of these conditions in advance.** The dormancy flag, the missing
 Aadhaar link, the lapsed KYC - all of it sits in the database, days before the
