@@ -4,10 +4,14 @@
 // the reactivation gate are real calls to the server (shown in the trace).
 
 const $ = (id) => document.getElementById(id);
-const api = (path, body) => fetch(path, {
+// Relative path so the app works both locally (served at "/") and on a static
+// host under a sub-path (GitHub Pages). Returns null instead of throwing when
+// there's no server (static hosting), so the pitch content still renders and
+// only the live-data sections quietly stand down.
+const api = (path, body) => fetch(path.replace(/^\//, ""), {
   method: "POST", headers: { "Content-Type": "application/json" },
   body: JSON.stringify(body || {}),
-}).then(r => r.json());
+}).then(r => r.ok ? r.json() : null).catch(() => null);
 
 let voiceOn = true;
 let uiLang = "hi-IN", uiCode = "hi";
@@ -281,6 +285,7 @@ function renderLimits() {
 // ── at scale + honest metrics ─────────────────────────────────────
 async function renderScale() {
   const d = await api("/api/cohort", {});
+  if (!d) return;   // static host with no server — this live-data section stands down
   const c = d.cohort, m = d.metrics;
   const cr = (x) => "₹" + (x / 1e7).toFixed(1) + " Cr";
   $("scaleGrid").innerHTML = [
@@ -337,6 +342,7 @@ $("lang").onchange = e => { uiLang = e.target.value; uiCode = e.target.selectedO
 // ── the district queue (the operational view) ─────────────────────
 async function renderQueue() {
   const d = await api("/api/queue", {});
+  if (!d) return;   // static host with no server
   const rupee = (x) => "₹" + x.toLocaleString("en-IN");
   $("queue").innerHTML = (d.queue || []).map(q => `
     <div class="q-row route-${q.route}">

@@ -1,0 +1,14 @@
+# One-click deploy of the FULL interactive app (voice rescue + live APIs) to
+# Render's free tier. In the Render dashboard: New -> Blueprint -> point at this
+# repo. Render injects $PORT, which app.py already reads; nothing else to set.
+services:
+  - type: web
+    name: nischay-sbi
+    runtime: docker
+    plan: free
+    healthCheckPath: /
+    envVars:
+      - key: HOST
+        value: 0.0.0.0
+      - key: NO_BROWSER
+        value: "1"
