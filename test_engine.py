@@ -119,4 +119,27 @@ check("model beats chance (lift > 1)", m["lift"] > 1.0)
 check("calibration curve has buckets", len(m["calibration"]) >= 3)
 check("note admits the outcomes are simulated", "simulated" in m["note"].lower())
 
+# ── readiness engine + cheapest-fix-first waterfall ─────────────────
+r = e.readiness_score("ramesh")
+check("readiness is a 0-100 score with red fields",
+      0 <= r["score"] <= 100 and isinstance(r["red"], list))
+check("Sunita is payment-ready (only a soft dormancy issue)",
+      e.readiness_score("sunita")["payment_ready"] is True)
+check("Budhia (unseeded, no phone) has the lowest readiness",
+      e.readiness_score("budhia")["score"] < e.readiness_score("ramesh")["score"])
+pl = e.resolution_plan("ramesh")
+check("Ramesh's name is auto-matched with zero human contact",
+      pl["zero_touch"] is True and any(s["rung"] == "zero_touch" for s in pl["steps"]))
+check("Ramesh's binding rung is voice (cheap, self-serve)", pl["binding_rung"] == "voice")
+check("Budhia's binding rung is a physical camp", e.resolution_plan("budhia")["binding_rung"] == "camp")
+check("Imran's binding rung is a human (genuine conflict)", e.resolution_plan("imran")["binding_rung"] == "human")
+check("cheaper rungs never cost more than dearer ones",
+      e.resolution_plan("budhia")["total_cost_inr"] >= e.resolution_plan("ramesh")["total_cost_inr"])
+cr = e.cohort_readiness()
+check("cohort readiness is deterministic", cr["cheap_pct"] == e.cohort_readiness()["cheap_pct"])
+check("most at-risk accounts are fixable cheaply (waterfall works)", cr["cheap_pct"] >= 50)
+check("some accounts need zero human contact at all", cr["zero_touch_pct"] > 0)
+check("rung percentages account for the whole at-risk cohort",
+      abs(sum(cr["pct"].values()) - 100) <= 2)
+
 print(f"\n  {_passed} checks passed.")

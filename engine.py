@@ -410,3 +410,142 @@ def honest_metrics(n=1500, seed=11):
                  f"and a Brier score of {brier:.3f} with the predicted-vs-actual curve tracking "
                  f"the diagonal (calibration error {ece}).")
     }
+
+
+# ---------------------------------------------------------------------------
+# Payment-readiness engine — the deeper reframe (see docs/SOLUTION_DESIGN.md).
+# Instead of rescuing payments after they fail, score every account's readiness
+# across the fields a payment needs, and resolve the CHEAPEST way first.
+# ---------------------------------------------------------------------------
+# Each field: (weight it removes from 100 when red, is-it-a-hard-block).
+_READINESS_FIELDS = {
+    "aadhaar_seeded": (40, True),   # APBS hard-rejects an unseeded Aadhaar
+    "kyc_valid":      (25, True),   # a frozen/expired-KYC account blocks new credits
+    "name_ok":        (30, True),   # a genuine name conflict blocks; a variant does not
+    "active":         (20, False),  # dormant: the credit lands but goes unclaimed (soft)
+    "reachable":      (10, False),  # a channel attribute, not a payment blocker itself
+}
+# cheapest resolution rung per red field → (rung, ₹ cost, one-line action)
+_RESOLUTION = {
+    "name_variant":   ("zero_touch", 0,   "Auto-matched from our own records — no contact needed"),
+    "active":         ("voice",      8,   "One-transaction reactivation, prompted by voice/IVR"),
+    "kyc_valid":      ("voice",      8,   "Voice re-KYC (→ V-CIP) — self-serve, no branch"),
+    "kyc_no_phone":   ("camp",       48,  "Re-KYC at the next banking camp (no phone to reach)"),
+    "aadhaar_seeded": ("camp",       48,  "Aadhaar re-seeding — assisted at a banking camp"),
+    "name_conflict":  ("human",      120, "Genuine identity conflict → human officer review"),
+}
+_RUNG_ORDER = ["zero_touch", "voice", "ivr", "camp", "human"]
+
+
+def _field_state(p):
+    """The green/red state of each readiness field for a person (from what the
+    bank already knows). 'name_ok' distinguishes a benign variant (auto-fixable,
+    green) from a genuine conflict (red)."""
+    doc, acct = p["legal_name"], p["aadhaar_name"]
+    score = fuzzy_name_match(doc, acct)
+    name = "match" if score >= 0.85 else "variant" if score >= 0.5 else "conflict"
+    return {
+        "aadhaar_seeded": p["aadhaar_seeded"],
+        "kyc_valid": not p["kyc_lapsed"],
+        "name_ok": name != "conflict",
+        "name_state": name,
+        "active": not p["dormant"],
+        "reachable": p["has_phone"],
+    }
+
+
+def readiness_score(pid):
+    """A 0-100 'payment-readiness' score for an account — a delivery score, not a
+    credit score. Plus the red fields and whether the account is payment-ready."""
+    p = PEOPLE.get(pid)
+    if not p:
+        return None
+    st = _field_state(p)
+    score = 100
+    red = []
+    for f, (wt, _hard) in _READINESS_FIELDS.items():
+        ok = st[f]
+        if f == "name_ok" and st["name_state"] == "variant":
+            score -= 5           # a variant is auto-fixable — a small ding, not a block
+            continue
+        if not ok:
+            score -= wt
+            red.append(f)
+    score = max(0, score)
+    payment_ready = st["aadhaar_seeded"] and st["kyc_valid"] and st["name_ok"]
+    return {"id": pid, "name": p["name"], "score": score,
+            "payment_ready": payment_ready, "fields": st, "red": red}
+
+
+def resolution_plan(pid):
+    """The cheapest-fix-first plan for an account: the specific rung each red field
+    needs, and the single binding (most expensive) rung that gates the payment."""
+    p = PEOPLE.get(pid)
+    if not p:
+        return None
+    st = _field_state(p)
+    steps = []
+    if st["name_state"] == "variant":
+        steps.append({"field": "name", **_dict(_RESOLUTION["name_variant"])})
+    if st["name_state"] == "conflict":
+        steps.append({"field": "name", **_dict(_RESOLUTION["name_conflict"])})
+    if not st["active"]:
+        steps.append({"field": "dormant", **_dict(_RESOLUTION["active"])})
+    if not st["kyc_valid"]:
+        key = "kyc_valid" if st["reachable"] else "kyc_no_phone"
+        steps.append({"field": "kyc", **_dict(_RESOLUTION[key])})
+    if not st["aadhaar_seeded"]:
+        steps.append({"field": "aadhaar", **_dict(_RESOLUTION["aadhaar_seeded"])})
+    # the binding rung = the most expensive one that must happen
+    binding = max(steps, key=lambda s: _RUNG_ORDER.index(s["rung"]), default=None) if steps else None
+    total = sum(s["cost"] for s in steps)
+    return {"id": pid, "name": p["name"], "steps": steps,
+            "binding_rung": binding["rung"] if binding else "ready",
+            "total_cost_inr": total,
+            "zero_touch": any(s["rung"] == "zero_touch" for s in steps)}
+
+
+def _dict(t):
+    return {"rung": t[0], "cost": t[1], "action": t[2]}
+
+
+def cohort_readiness(eligible=142000, seed_key="readiness"):
+    """Across a district-sized cohort, classify every at-risk account by the CHEAPEST
+    rung that resolves it — the number that proves the waterfall's efficiency:
+    what share is fixable with zero human contact, or by voice, vs. needing a camp/human."""
+    rng = random.Random(zlib.crc32(seed_key.encode()) % 100000)
+    sample = min(eligible, 6000)
+    scale = eligible / sample
+    tally = {r: 0 for r in _RUNG_ORDER}
+    at_risk = 0
+    for _ in range(sample):
+        unseeded = rng.random() < 0.07
+        kyc = rng.random() < 0.06
+        dormant = rng.random() < 0.11
+        nophone = rng.random() < 0.20
+        name_variant = rng.random() < 0.08     # a benign spelling variance
+        name_conflict = rng.random() < 0.01
+        # is the account at risk (payment won't land or lands unclaimed)?
+        if not (unseeded or kyc or dormant or name_conflict or name_variant):
+            continue
+        at_risk += 1
+        # cheapest binding rung for this account
+        if name_conflict:
+            rung = "human"
+        elif unseeded or (kyc and nophone):
+            rung = "camp"
+        elif kyc or dormant:
+            rung = "voice"
+        else:                                   # only a benign name variant
+            rung = "zero_touch"
+        tally[rung] += 1
+    scaled = {r: round(tally[r] * scale) for r in tally}
+    total = sum(scaled.values()) or 1
+    cheap = scaled["zero_touch"] + scaled["voice"] + scaled["ivr"]
+    return {
+        "at_risk_accounts": round(at_risk * scale),
+        "by_rung": scaled,
+        "pct": {r: round(scaled[r] / total * 100) for r in scaled},
+        "cheap_pct": round(cheap / total * 100),      # zero-touch or voice/IVR
+        "zero_touch_pct": round(scaled["zero_touch"] / total * 100),
+    }

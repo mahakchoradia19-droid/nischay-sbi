@@ -162,6 +162,16 @@ class Handler(BaseHTTPRequestHandler):
                 "metrics": engine.honest_metrics(),
             })
 
+        if p == "/api/readiness":
+            pid = _s(body.get("id"), "ramesh")
+            return self._json(200, {
+                "readiness": engine.readiness_score(pid),
+                "plan": engine.resolution_plan(pid),
+            })
+
+        if p == "/api/cohort-readiness":
+            return self._json(200, engine.cohort_readiness())
+
         self._json(404, {"error": "unknown endpoint"})
 
     # ---- plumbing ----------------------------------------------------------
