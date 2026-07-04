@@ -131,10 +131,11 @@ rescuing the money once. It's making sure Ramesh never misses it again.
 
 ## Open it right now (nothing to install)
 
-- **The film:** [mahakchoradia19-droid.github.io/nischay-sbi/film.html](https://mahakchoradia19-droid.github.io/nischay-sbi/film.html)
+- **The film (Live):** [mahakchoradia19-droid.github.io/nischay-sbi/film.html](https://mahakchoradia19-droid.github.io/nischay-sbi/film.html)
   — an ~2-minute film that explains the whole idea from scratch, narrated in real
-  Indian voices, running in your browser. This is the "video anyone can open"; to get
-  an `.mp4` to submit, screen-record one play-through.
+  Indian voices, running in your browser. 
+- **The film (.mp4):** `[INSERT YOUTUBE / GOOGLE DRIVE LINK HERE]`
+  — **IMPORTANT**: Corporate firewalls often block WebAudio or GitHub Pages. Screen-record one flawless play-through of the live film above, upload it to YouTube or Drive (set to "Anyone with the link can view"), and paste the link here so judges can watch it instantly.
 - **The pitch page:** [mahakchoradia19-droid.github.io/nischay-sbi/](https://mahakchoradia19-droid.github.io/nischay-sbi/)
   — reads as a full static pitch. (The *live* voice rescue needs the Python API below,
   so run it locally or deploy it for that part.)

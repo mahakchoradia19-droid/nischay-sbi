@@ -80,15 +80,7 @@ where the AI lives, and only there:
 4. **Arrive.** The account is live when the cycle runs. The money lands. The family
    knows nothing except that, this time, it came.
 
-**The guardrails, stated before anyone asks:** the conversation *re-skins* the
-mandatory verification steps - it removes none of them. The agent's powers are tiny
-and closed: verify identity, reactivate an account. It **never moves money**; the
-credit arrives from the government through the existing rails. Every consequential
-decision runs through deterministic code - a gate the conversational layer cannot
-talk its way past - and anything ambiguous defaults to a human being. The worst case
-of an AI mistake is a payment that stays exactly as blocked as it already was. We
-built it so that the people least able to catch an AI's errors are the people the AI
-can least affect.
+**The guardrails, stated before anyone asks:** The voice agent does not circumvent RBI rules; it serves as the frictionless front door to the mandated Video Customer Identification Process (V-CIP). The conversation *re-skins* the mandatory verification steps (like liveness checks and assisted workflows) without removing them. The agent's powers are tiny and closed: verify identity, initiate an account reactivation. For Aadhaar unlinked cases, the camp *initiates* a re-seed consent, rather than unilaterally executing it. It **never moves money**; the credit arrives from the government through the existing rails. Every consequential decision runs through deterministic code - a gate the conversational layer cannot talk its way past - and anything ambiguous defaults to a human being. The worst case of an AI mistake is a payment that stays exactly as blocked as it already was. We built it so that the people least able to catch an AI's errors are the people the AI can least affect.
 
 **And the system grades itself in public.** It reports the honest numbers - how often
 its risk flags were right, how well its confidence matches reality, and which of its
