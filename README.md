@@ -129,7 +129,21 @@ rescuing the money once. It's making sure Ramesh never misses it again.
 
 ---
 
-## Running it
+## Open it right now (nothing to install)
+
+- **The film:** [mahakchoradia19-droid.github.io/nischay-sbi/film.html](https://mahakchoradia19-droid.github.io/nischay-sbi/film.html)
+  — an ~2-minute film that explains the whole idea from scratch, narrated in real
+  Indian voices, running in your browser. This is the "video anyone can open"; to get
+  an `.mp4` to submit, screen-record one play-through.
+- **The pitch page:** [mahakchoradia19-droid.github.io/nischay-sbi/](https://mahakchoradia19-droid.github.io/nischay-sbi/)
+  — reads as a full static pitch. (The *live* voice rescue needs the Python API below,
+  so run it locally or deploy it for that part.)
+
+**Deploy the full interactive app** (voice rescue + live APIs) for a shareable URL:
+one-click via [Render](https://render.com) — *New → Blueprint → this repo*; the
+included `render.yaml` + `Dockerfile` need no configuration. Any container host works.
+
+## Running it locally
 
 Requirements: **Python 3.9+. Nothing else** - no pip, no npm, no build step. Best in
 Chrome, because the voice agent uses the browser's Web Speech API.
@@ -186,8 +200,12 @@ Nischay/
 │   └── app.js       the rescue state machine, the voice engine (speak + listen),
 │                    the queue, and the live trace
 ├── docs/
-│   ├── PROPOSAL.md  the written proposal (plain-language, for non-technical readers)
-│   └── FIELD_KIT.md the survey + real-user demo script for primary evidence
+│   ├── PROPOSAL.md              the written proposal (plain-language)
+│   ├── Nischay_SBI_Hackathon.pptx  the submission deck (12 slides)
+│   ├── FIELD_KIT.md             the survey + real-user demo script for primary evidence
+│   └── GAPS.md                  an honest internal list of what's thin or missing
+├── Dockerfile · render.yaml    one-click deploy of the full app
+├── .github/workflows/          CI (tests) + Pages (publishes the film)
 ├── .github/         CI: both test suites run on every push
 └── LICENSE          MIT
 ```
