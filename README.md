@@ -1,7 +1,7 @@
-# Landfall - the bank that makes sure the money lands
+# Nischay - the bank that makes sure the money lands
 
 **An SBI Hackathon project · Mahak Choradia**
-![tests](https://github.com/mahakchoradia19-droid/landfall-sbi/actions/workflows/tests.yml/badge.svg) · MIT licensed
+![tests](https://github.com/mahakchoradia19-droid/nischay-sbi/actions/workflows/tests.yml/badge.svg) · MIT licensed
 
 There is a quiet, expensive problem hiding inside India's welfare system, and it has
 nothing to do with corruption or leakage. It's this: the government sends money to
@@ -170,7 +170,7 @@ just the same. The point of the gate is that it doesn't trust the talker.
 ## What's in here
 
 ```
-Landfall/
+Nischay/
 ├── app.py           the hardened server (stdlib only): rate-limited, size-capped,
 │                    security headers, localhost-bound by default
 ├── engine.py        the real logic: name reconciliation (honorific/abbreviation-aware),

@@ -1,0 +1,116 @@
+[
+  {
+    "scene": 1,
+    "file": "s01.m4a",
+    "voice": "Aman",
+    "dur": 9.05
+  },
+  {
+    "scene": 2,
+    "file": "s02.m4a",
+    "voice": "Aman",
+    "dur": 9.67
+  },
+  {
+    "scene": 3,
+    "file": "s03.m4a",
+    "voice": "Aman",
+    "dur": 4.25
+  },
+  {
+    "scene": 4,
+    "file": "s04.m4a",
+    "voice": "Aman",
+    "dur": 3.95
+  },
+  {
+    "scene": 5,
+    "file": "s05.m4a",
+    "voice": "Aman",
+    "dur": 18.18
+  },
+  {
+    "scene": 6,
+    "file": "s06.m4a",
+    "voice": "Aman",
+    "dur": 7.16
+  },
+  {
+    "scene": 7,
+    "file": "s07.m4a",
+    "voice": "Aman",
+    "dur": 3.63
+  },
+  {
+    "scene": 8,
+    "file": "s08.m4a",
+    "voice": "Aman",
+    "dur": 9.17
+  },
+  {
+    "scene": 9,
+    "file": "s09.m4a",
+    "voice": "Aman",
+    "dur": 0.64
+  },
+  {
+    "scene": 10,
+    "file": "s10.m4a",
+    "voice": "Aman",
+    "dur": 5.05
+  },
+  {
+    "scene": 11,
+    "file": "s11.m4a",
+    "voice": "Lekha",
+    "dur": 7.42
+  },
+  {
+    "scene": 12,
+    "file": "s12.m4a",
+    "voice": "Aman",
+    "dur": 11.18
+  },
+  {
+    "scene": 13,
+    "file": "s13.m4a",
+    "voice": "Aman",
+    "dur": 5.43
+  },
+  {
+    "scene": 14,
+    "file": "s14.m4a",
+    "voice": "Aman",
+    "dur": 5.77
+  },
+  {
+    "scene": 15,
+    "file": "s15.m4a",
+    "voice": "Aman",
+    "dur": 1.35
+  },
+  {
+    "scene": 16,
+    "file": "s16.m4a",
+    "voice": "Aman",
+    "dur": 10.6
+  },
+  {
+    "scene": 17,
+    "file": "s17.m4a",
+    "voice": "Aman",
+    "dur": 11.57
+  },
+  {
+    "scene": 18,
+    "file": "s18.m4a",
+    "voice": "Aman",
+    "dur": 5.53
+  },
+  {
+    "scene": 19,
+    "file": "s19.m4a",
+    "voice": "Aman",
+    "dur": 4.98
+  }
+]

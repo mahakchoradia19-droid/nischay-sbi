@@ -1,5 +1,5 @@
 """
-Landfall — server (stdlib only).
+Nischay — server (stdlib only).
 Run:  python3 app.py   (or `python app.py` on Windows)   ->  http://localhost:8000
 
 Zero dependencies, zero setup: this is meant to run identically on any machine
@@ -52,7 +52,8 @@ RATE_WINDOW = 60                  # seconds
 RATE_MAX = 120                    # requests per window per IP
 
 _CT = {".html": "text/html; charset=utf-8", ".js": "text/javascript",
-       ".css": "text/css", ".svg": "image/svg+xml", ".ico": "image/x-icon"}
+       ".css": "text/css", ".svg": "image/svg+xml", ".ico": "image/x-icon",
+       ".m4a": "audio/mp4", ".json": "application/json"}
 
 _SECURITY_HEADERS = [
     ("X-Content-Type-Options", "nosniff"),
@@ -92,7 +93,7 @@ _limiter = _RateLimiter()
 
 
 class Handler(BaseHTTPRequestHandler):
-    server_version = "Landfall"       # no python/http version disclosure
+    server_version = "Nischay"       # no python/http version disclosure
     sys_version = ""
 
     def log_message(self, *a):
@@ -224,7 +225,7 @@ def main():
     url = f"http://localhost:{bound_port}"
     py = os.path.basename(sys.executable) or "python3"
 
-    print("\n  Landfall - the bank that makes sure the money lands")
+    print("\n  Nischay - the bank that makes sure the money lands")
     print(f"  Open   {url}")
     print(f"  Film   {url}/film.html")
     if bound_port != PORT:
